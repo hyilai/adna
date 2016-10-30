@@ -52,6 +52,11 @@ string make_extra_DNA(int range) {
 
 int main(int argc, char** argv) {
 
+	if(argc != 4) {
+		cout << "Error: Must provide arguments <length of DNA> <length of adapter> <number of fragments>" << endl;
+		return 0;
+	}
+
 	int Length_DNA = atoi(argv[1]); //This gets the length of the DNA from the command argument
 	int Length_adapter = atoi(argv[2]); //This gets the length of the adapter from the command argument 
 	int DNA_split = atoi(argv[3]); //This is how many times we will split the DNA  
