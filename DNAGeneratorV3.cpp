@@ -102,10 +102,7 @@ int main(int argc, char** argv) {
 		int end = (i+1)*(Length_DNA/DNA_split);
 
 
-		//Generates extra DNA for the ends of the adapters
-		//The length of the extra DNA will be between 0 - 3/4(Length_adapter) 
-		string extra1 = make_extra_DNA((Length_adapter*3)/4);
-		string extra2 = make_extra_DNA((Length_adapter*3)/4);
+		
 
 
 		//cout << start << " " << end << "  " << DNA.substr(start, len) << endl;
@@ -116,6 +113,13 @@ int main(int argc, char** argv) {
 		int temp = rand() % (Length_adapter - MIN_ADAPTER_LENGTH) + MIN_ADAPTER_LENGTH;
 		string adapterFrag1 = adapter.substr(Length_adapter-temp,temp);
 		string adapterFrag2 = adapter.substr(0,temp);
+
+
+		//Generates extra DNA for the ends of the adapters
+		//The length of the extra DNA will be between 0 - 3/4(Length_adapter) 
+		string extra1 = make_extra_DNA((adapterFrag1.length())/2);
+		string extra2 = make_extra_DNA((adapterFrag2.length())/2);
+
 
 
 		int num_extra = rand() % 15;
