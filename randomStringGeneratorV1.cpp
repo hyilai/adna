@@ -52,7 +52,11 @@ int main(int argc, char** argv) {
 		}
 		outFile <<  endl;
 		outFile << "+" << endl;
-		outFile << "QQQQQQQQQQQQQ" << endl;
+
+		for(i=0;i<length_line;i++,j++) {
+			outFile << "Q" ;
+		}
+		outFile <<  endl;
 	}
 
 	outFile.close();

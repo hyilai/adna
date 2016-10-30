@@ -143,7 +143,19 @@ int main(int argc, char** argv) {
 
 		outFile << adapterFrag2 << extra2 << endl;
 		outFile << "+" << endl;
-		outFile << "QQQQQQQQQQQQQ" << endl;
+
+
+		int line_length = extra1.length() + extra2.length() + adapterFrag1.length() + adapterFrag2.length() + len;
+
+		
+		for(int k=0;k<line_length;k++) {
+			outFile << "Q" ;
+		}
+
+		outFile <<  endl;
+
+
+
 		out << DNA.substr(start, len) << endl;
 	}
 
