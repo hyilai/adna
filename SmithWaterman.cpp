@@ -1,3 +1,15 @@
+/************************************************************
+ ****
+ ****	This portion uses the Smith Waterman Algorithm 
+ ****	to do several tasks:
+ ****		1. find adapter fragments within the reads
+ ****			and trim them out
+ ****		2. find matches between two sequences by
+ ****			using their quality control strings
+ ****
+ ************************************************************/
+
+
 #include "SmithWaterman.hpp"
 
 using namespace std;
@@ -5,15 +17,12 @@ using namespace std;
 typedef vector<vector<int> >Grid;
 
 //similarity function
-#define MATCH 7
+#define MATCH 5
 #define MISMATCH -4
-// const int MATCH = 2;
-// const int MISMATCH = -3;
 
 //gap-scoring scheme
 #define GAP_EXTENSION 8
 #define GAP_PENALTY 10
-// const int GAP = -4;
 
 
 class functions {
@@ -41,7 +50,7 @@ public:
 				int insertion = 0;
 
 				//match/mismatch
-				int s = (a == b) ? MATCH : MISMATCH;
+				int s = similarity(a, b);
 				match = grid[i-1][j-1] + s;
 
 				//deletion
@@ -72,9 +81,9 @@ public:
 	void print_grid (string str1, string str2, Grid grid) {
 		int m = str1.length();
 		int n = str2.length();
-		cout << setw(5) << "- ";
+		cout << setw(6) << "- ";
 		for (int i = 0; i < str2.length(); i++) {
-			cout << setw(2) << str2[i] << " ";
+			cout << setw(3) << str2[i] << " ";
 		}
 		cout << endl;
 		for (int i = 0; i < m+1; i++) {
@@ -84,7 +93,7 @@ public:
 				cout << "- ";
 			}
 			for (int j = 0; j < n+1; j++) {
-				cout << setw(2) << grid[i][j] << " ";
+				cout << setw(3) << grid[i][j] << " ";
 			}
 			cout << endl;
 		}
@@ -95,13 +104,13 @@ private:
 		return GAP_PENALTY + (GAP_EXTENSION * i);
 	}
 
-	// int similarity_function() {
-
-	// }
+	int similarity (char a, char b) {
+		return (a == b) ? MATCH : MISMATCH;
+	}
 };
 
 
-SmithWaterman::SmithWaterman (string str1, string str2, int match_score) : str1(str1), str2(str2), match_score(match_score) {
+SmithWaterman::SmithWaterman (string str1, string str2, string q1, string q2, int match_score) : str1(str1), str2(str2), q1(q1), q2(q2), match_score(match_score) {
 	functions f;
 
 	int m = str1.length();
@@ -114,7 +123,7 @@ SmithWaterman::SmithWaterman (string str1, string str2, int match_score) : str1(
 
 	grid = f.build_grid(str1, str2);
 
-	f.print_grid(str1,str2,grid);
+	// f.print_grid(str1,str2,grid);
 }
 
 string SmithWaterman::trim_both_sides () {
@@ -123,25 +132,7 @@ string SmithWaterman::trim_both_sides () {
 	functions f;
 	grid = f.build_grid(str1, str2);
 
-	int m = str1.length();
-	int n = str2.length();
-	cout << setw(5) << "- ";
-	for (int i = 0; i < str2.length(); i++) {
-		cout << setw(2) << str2[i] << " ";
-	}
-	cout << endl;
-	for (int i = 0; i < m+1; i++) {
-		if (i != 0) {
-			cout << str1[i-1] << " ";
-		} else {
-			cout << "- ";
-		}
-		for (int j = 0; j < n+1; j++) {
-			cout << setw(2) << grid[i][j] << " ";
-		}
-		cout << endl;
-	}
-	cout << endl;
+	// f.print_grid(str1,str2,grid);
 
 	return trim_from_ending();
 }
@@ -166,6 +157,7 @@ string SmithWaterman::trim_from_beginning () {
 	}
 
 	string trimmed = str1.substr(highest_i, str1.length()-highest_i);
+	q1 = q1.substr(highest_i, q1.length()-highest_i);
 	return trimmed;
 }
 
@@ -187,8 +179,6 @@ string SmithWaterman::trim_from_ending () {
 			}
 		}
 	}
-
-	// cout << highest_i << "," << highest_j << endl;
 
 	//get trimmed sequence
 	int curr_score = highest;
@@ -227,17 +217,23 @@ string SmithWaterman::trim_from_ending () {
 			// }
 		}
 
+		curr_score = next_highest;
 		i = next_i;
 		j = next_j;
 
-		// cout << i << "," << j << endl;
 	}
+	
 	string r = str1.substr(0,i);
-
-	// cout << i << "," << j << endl;
-
-	// cout << i << " " << r << endl;
+	q1 = q1.substr(0,i);
 	return r;
+}
+
+string SmithWaterman::get_quality1 () {
+	return q1;
+}
+
+string SmithWaterman::get_quality2 () {
+	return q2;
 }
 
 /**

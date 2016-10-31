@@ -40,11 +40,14 @@ int main (int argc, char** argv) {
 		adapters.push_back(ad);
 	}
 
+	int j = 0;
 
 	while(1) {
 		if (file.peek() == EOF) {
 			break;
 		}
+
+		cout << "Reading line " << j++ << "..." << endl;
 
 		string line1, line2, line3, line4, trimmed;
 
@@ -55,20 +58,6 @@ int main (int argc, char** argv) {
 		// second line of read
 		// sequence read
 		getline(file, line2);
-		for (int i = 0; i < adapters.size(); i++) {
-
-			SmithWaterman* sw = new SmithWaterman(line2,adapters[i], 0);
-
-			string temp = sw->trim_both_sides();
-
-			if (temp.length() < line2.length()) {
-				trimmed = temp;
-			}
-
-			delete sw;
-		}
-
-		trimmed_seq.push_back(trimmed);
 
 		// third line of read
 		// skip this line
@@ -79,6 +68,21 @@ int main (int argc, char** argv) {
 		// quality control
 		getline(file, line4);
 
+		for (int i = 0; i < adapters.size(); i++) {
+
+			SmithWaterman* sw = new SmithWaterman(line2,adapters[i], line4, "", 0);
+
+			// string temp = sw->trim_both_sides();
+			string temp = sw->trim_from_ending();
+
+			if (temp.length() < line2.length()) {
+				trimmed = temp;
+			}
+
+			delete sw;
+		}
+
+		trimmed_seq.push_back(trimmed);
 	}
 
 	file.close();
