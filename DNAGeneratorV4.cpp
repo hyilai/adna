@@ -156,13 +156,11 @@ int main(int argc, char** argv) {
 		}
 
 
-		
-
-
-		
-
-		extraDNAFile << extra1 << "  " << adapterFrag1 << "  " << DNA.substr(start, len) << "  " << adapterFrag2 << "  " << extra2 << endl;
-
+		extraDNAFile << extra1 << "  " << adapterFrag1 << "  " << DNA.substr(start, len);
+		if (i == DNA_split-1 && end != Length_DNA) {
+			extraDNAFile << DNA.substr(end, Length_DNA);
+		}
+		extraDNAFile << "  " << adapterFrag2 << "  " << extra2 << endl;
 		
 
 		outFile << adapterFrag2 << extra2 << endl;
