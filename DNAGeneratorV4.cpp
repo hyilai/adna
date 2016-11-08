@@ -53,7 +53,7 @@ string make_extra_DNA(int range) {
 int main(int argc, char** argv) {
 
 	if(argc != 5) {
-		cout << "Error: Must provide arguments <length of DNA> <length of adapters> <number of adapters> <number of fragments>" << endl;
+		cout << "Error: Must provide arguments <length of DNA> <length of adapters> <number of fragments> <number of adapters>" << endl;
 		return 0;
 	}
 
@@ -156,7 +156,8 @@ int main(int argc, char** argv) {
 		}
 
 
-		extraDNAFile << extra1 << "  " << adapterFrag1 << "  " << DNA.substr(start, len);
+		//extraDNAFile << extra1 << "  " << adapterFrag1 << "  " << DNA.substr(start, len);
+		extraDNAFile << "  " << DNA.substr(start, len);
 		if (i == DNA_split-1 && end != Length_DNA) {
 			extraDNAFile << DNA.substr(end, Length_DNA);
 		}
@@ -167,7 +168,9 @@ int main(int argc, char** argv) {
 		outFile << "+" << endl;
 		
 
-		int line_length = extra1.length() + extra2.length() + adapterFrag1.length() + adapterFrag2.length() + len;
+		//int line_length = extra1.length() + extra2.length() + adapterFrag1.length() + adapterFrag2.length() + len;
+		int line_length =  extra2.length() + adapterFrag2.length() + len;
+
 
 		for(int k=0;k<line_length;k++) {
 			outFile << "Q" ;
