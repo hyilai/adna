@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
 
 		}
 
-		outFile << extra1 << adapterFrag1;
+		//outFile << extra1 << adapterFrag1;
 		outFile << DNA.substr(start, len);
 		if (i == DNA_split-1 && end != Length_DNA) {
 			outFile << DNA.substr(end, Length_DNA);
