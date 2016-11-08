@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <ctime>
 #include "SmithWaterman.hpp"
 // #include <pthread.h>
 
@@ -42,6 +43,9 @@ int main (int argc, char** argv) {
 
 	int j = 0;
 
+	double total_elapsed_time = 0.0;
+	int lines = 0;
+
 	while(1) {
 		if (file.peek() == EOF) {
 			break;
@@ -50,6 +54,7 @@ int main (int argc, char** argv) {
 		cout << "Reading line " << j++ << "..." << endl;
 
 		string line1, line2, line3, line4, trimmed;
+		int highest_score = 0;
 
 		// first line of read
 		// information of the read
@@ -68,19 +73,27 @@ int main (int argc, char** argv) {
 		// quality control
 		getline(file, line4);
 
+		clock_t start_time = clock();
+
 		for (int i = 0; i < adapters.size(); i++) {
 
 			SmithWaterman* sw = new SmithWaterman(line2,adapters[i], line4, "", 0);
 
-			// string temp = sw->trim_both_sides();
-			string temp = sw->trim_from_ending();
+			int curr_high_score = sw->get_highest_score();
 
-			if (temp.length() < line2.length()) {
-				trimmed = temp;
+			if (highest_score < curr_high_score) {
+				highest_score = curr_high_score;
+				trimmed = sw->trim_from_ending();
 			}
 
 			delete sw;
 		}
+
+		clock_t end_time = clock();
+
+		// for calculations
+		total_elapsed_time += double(end_time - start_time) / CLOCKS_PER_SEC;
+		lines++;
 
 		trimmed_seq.push_back(trimmed);
 	}
@@ -96,6 +109,10 @@ int main (int argc, char** argv) {
 	} 
 	
 	out.close();
+
+	// for calculations
+	double average_elapsed_time = total_elapsed_time / (double) lines;
+	cout << "Average elapsed time for each line: " << average_elapsed_time << " s" << endl; 
 
 	return 0;
 }

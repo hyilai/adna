@@ -13,11 +13,13 @@
 class SmithWaterman {
 public:
 	SmithWaterman (std::string, std::string, std::string, std::string, int = 0);
+	int get_highest_score();
 	std::string trim_both_sides ();
 	std::string trim_from_beginning ();
 	std::string trim_from_ending ();
 	std::string get_quality1();
 	std::string get_quality2();
+	std::string match_reads();
 	// ~SmithWaterman();
 private:
 	std::string str1;

@@ -81,16 +81,16 @@ public:
 	void print_grid (string str1, string str2, Grid grid) {
 		int m = str1.length();
 		int n = str2.length();
-		cout << setw(6) << "- ";
+		cout << "x" << "\t" << setw(6) << "- ";
 		for (int i = 0; i < str2.length(); i++) {
 			cout << setw(3) << str2[i] << " ";
 		}
 		cout << endl;
 		for (int i = 0; i < m+1; i++) {
 			if (i != 0) {
-				cout << str1[i-1] << " ";
+				cout << i << "\t" << str1[i-1] << " ";
 			} else {
-				cout << "- ";
+				cout << i << "\t" << "- ";
 			}
 			for (int j = 0; j < n+1; j++) {
 				cout << setw(3) << grid[i][j] << " ";
@@ -124,6 +124,20 @@ SmithWaterman::SmithWaterman (string str1, string str2, string q1, string q2, in
 	grid = f.build_grid(str1, str2);
 
 	// f.print_grid(str1,str2,grid);
+}
+
+int SmithWaterman::get_highest_score () {
+	int highest = 0;
+
+	for (int i = 0; i < grid.size(); i++) {
+		for (int j = 0; j <grid[i].size(); j++) {
+			if (grid[i][j] >= highest) {
+				highest = grid[i][j];
+			}
+		}
+	}
+
+	return highest;
 }
 
 string SmithWaterman::trim_both_sides () {
@@ -160,6 +174,7 @@ string SmithWaterman::trim_from_beginning () {
 	q1 = q1.substr(highest_i, q1.length()-highest_i);
 	return trimmed;
 }
+
 
 /**
  ** This function trims ending adapter from 
@@ -225,6 +240,8 @@ string SmithWaterman::trim_from_ending () {
 	
 	string r = str1.substr(0,i);
 	q1 = q1.substr(0,i);
+
+	// cout << i << " " << r << endl;
 	return r;
 }
 
@@ -234,6 +251,67 @@ string SmithWaterman::get_quality1 () {
 
 string SmithWaterman::get_quality2 () {
 	return q2;
+}
+
+string SmithWaterman::match_reads () {
+	int highest = 0;
+	int highest_i = 0;
+	int highest_j = 0;
+
+	for (int i = 0; i < grid.size(); i++) {
+		for (int j = 0; j <grid[i].size(); j++) {
+			if (grid[i][j] >= highest) {
+				highest = grid[i][j];
+				highest_i = i;
+				highest_j = j;
+			}
+		}
+	}
+
+	// get matched sequence
+	int curr_score = highest;
+	int i = highest_i;
+	int j = highest_j;
+	while (curr_score != 0 && i > 0 && j > 0) {
+		int current = grid[i][j];
+		int left = grid[i][j-1];
+		int upper_left = grid[i-1][j-1];
+		int upper = grid[i-1][j];
+
+		int next_i = i-1;
+		int next_j = j-1;
+		int next_highest = 0;
+
+		if (left > next_highest) {
+			// if (left != current) {
+				//left is biggest
+				next_highest = left;
+				next_j = j-1;
+			// }
+		}
+		if (upper_left > next_highest) {
+			// if (upper_left != current) {
+				//upper_left is biggest
+				next_highest = upper_left;
+				next_i = i-1;
+				next_j = j-1;
+			// }
+		}
+		if (upper > next_highest) {
+			// if (upper != current) {
+				//upper is bigest
+				next_highest = upper;
+				next_i = i-1;
+			// }
+		}
+
+		curr_score = next_highest;
+		i = next_i;
+		j = next_j;
+
+	}
+
+	return "";
 }
 
 /**
