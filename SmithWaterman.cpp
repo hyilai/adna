@@ -31,7 +31,6 @@ public:
 	 **	this function calculates the individual scores
 	 ** for each cell in the table
 	 **/
-	Grid grid;
 	Grid build_grid (string str1, string str2) {
 
 		int m = str1.length();
@@ -39,6 +38,10 @@ public:
 		grid.resize(m+1, vector<int>(n+1, 0));
 
 		// cout << str1 << " " << str2 << " " << n << endl;
+
+		int highest = 0;
+		highest_i = 0;
+		highest_j = 0;
 
 		for (int i = 1; i < grid.size(); i++) {
 			char a = str1[i-1];
@@ -59,14 +62,12 @@ public:
 					int temp = grid[i-k][j] + gap(k);
 					if (deletion < temp) deletion = temp;
 				}
-				// deletion = grid[i-1][j] + GAP;
 
 				//insertion
 				for (int l = j-1; l > 0; l--) {
 					int temp = grid[i][j-l] + gap(l);
 					if (deletion < temp) insertion = temp;
 				}
-				// insertion = grid[i][j-1] + GAP;
 
 				//find maximum between the three
 				score = (score < match) ? match : score;
@@ -74,6 +75,12 @@ public:
 				score = (score < insertion) ? insertion : score;
 
 				grid[i][j] = score;
+
+				if (score > highest) {
+					highest = score;
+					highest_i = i;
+					highest_j = j;
+				}
 			}
 		}
 		return grid;
@@ -100,7 +107,20 @@ public:
 		}
 		cout << endl;
 	}
+
+	int get_highest_i () {
+		return highest_i;
+	}
+
+	int get_highest_j () {
+		return highest_j;
+	}
+
 private:
+	Grid grid;
+	int highest_i;
+	int highest_j;
+	
 	int gap (int i) {
 		return -(GAP_PENALTY + (GAP_EXTENSION * i) );
 	}
@@ -125,7 +145,7 @@ SmithWaterman::SmithWaterman (string str1, string str2, string q1, string q2, in
 
 	int m = str1.length();
 	int n = str2.length();
-	// grid.resize(m+1,vector<int>(n+1,0));
+
 	if (m == 0 || n == 0) {
 		cout << "Error: string(s) length is zero" << endl;
 		exit(EXIT_FAILURE);
@@ -133,21 +153,14 @@ SmithWaterman::SmithWaterman (string str1, string str2, string q1, string q2, in
 
 	grid = f.build_grid(str1, str2);
 
+	highest_i = f.get_highest_i();
+	highest_j = f.get_highest_j();
+
 	//f.print_grid(str1,str2,grid);
 }
 
 int SmithWaterman::get_highest_score () {
-	int highest = 0;
-
-	for (int i = 0; i < grid.size(); i++) {
-		for (int j = 0; j <grid[i].size(); j++) {
-			if (grid[i][j] >= highest) {
-				highest = grid[i][j];
-			}
-		}
-	}
-
-	return highest;
+	return grid[highest_i][highest_j];
 }
 
 string SmithWaterman::trim_both_sides () {
@@ -166,19 +179,6 @@ string SmithWaterman::trim_both_sides () {
  ** sequence read
  **/	
 string SmithWaterman::trim_from_beginning () {
-	int highest = 0;
-	int highest_i = 0;
-	int highest_j = 0;
-
-	for (int i = 0; i < grid.size(); i++) {
-		for (int j = 0; j <grid[i].size(); j++) {
-			if (grid[i][j] > highest) {
-				highest = grid[i][j];
-				highest_i = i;
-				highest_j = j;
-			}
-		}
-	}
 
 	string trimmed = str1.substr(highest_i, str1.length()-highest_i);
 	q1 = q1.substr(highest_i, q1.length()-highest_i);
@@ -191,26 +191,13 @@ string SmithWaterman::trim_from_beginning () {
  ** sequence read
  **/	
 string SmithWaterman::trim_from_ending () {
-	int highest = 0;
-	int highest_i = 0;
-	int highest_j = 0;
-
-	for (int i = 0; i < grid.size(); i++) {
-		for (int j = 0; j <grid[i].size(); j++) {
-			if (grid[i][j] >= highest) {
-				highest = grid[i][j];
-				highest_i = i;
-				highest_j = j;
-			}
-		}
-	}
 
 	//cout << highest_i << "," << highest_j << endl;
 	//functions f;
 	//f.print_grid(str1, str2, grid);
 
 	//get trimmed sequence
-	int curr_score = highest;
+	int curr_score = grid[highest_i][highest_j];	//highest score in the grid
 	int i = highest_i;
 	int j = highest_j;
 	while (curr_score != 0 && i > 0 && j > 0) {
@@ -224,26 +211,20 @@ string SmithWaterman::trim_from_ending () {
 		int next_highest = 0;
 
 		if (left > next_highest) {
-			// if (left != current) {
-				//left is biggest
-				next_highest = left;
-				next_j = j-1;
-			// }
+			//left is biggest
+			next_highest = left;
+			next_j = j-1;
 		}
 		if (upper_left > next_highest) {
-			// if (upper_left != current) {
-				//upper_left is biggest
-				next_highest = upper_left;
-				next_i = i-1;
-				next_j = j-1;
-			// }
+			//upper_left is biggest
+			next_highest = upper_left;
+			next_i = i-1;
+			next_j = j-1;
 		}
 		if (upper > next_highest) {
-			// if (upper != current) {
-				//upper is bigest
-				next_highest = upper;
-				next_i = i-1;
-			// }
+			//upper is bigest
+			next_highest = upper;
+			next_i = i-1;
 		}
 
 		curr_score = next_highest;
@@ -278,6 +259,10 @@ string SmithWaterman::get_matched_string() {
 	return matched;
 }
 
+
+/**
+ ** WIP
+ **/
 bool SmithWaterman::match_reads () {
 	int highest = 0;
 	int highest_i = 0;
@@ -308,26 +293,20 @@ bool SmithWaterman::match_reads () {
 		int next_highest = 0;
 
 		if (left > next_highest) {
-			// if (left != current) {
-				//left is biggest
-				next_highest = left;
-				next_j = j-1;
-			// }
+			//left is biggest
+			next_highest = left;
+			next_j = j-1;
 		}
 		if (upper_left > next_highest) {
-			// if (upper_left != current) {
-				//upper_left is biggest
-				next_highest = upper_left;
-				next_i = i-1;
-				next_j = j-1;
-			// }
+			//upper_left is biggest
+			next_highest = upper_left;
+			next_i = i-1;
+			next_j = j-1;
 		}
 		if (upper > next_highest) {
-			// if (upper != current) {
-				//upper is bigest
-				next_highest = upper;
-				next_i = i-1;
-			// }
+			//upper is bigest
+			next_highest = upper;
+			next_i = i-1;
 		}
 
 		curr_score = next_highest;
@@ -336,16 +315,23 @@ bool SmithWaterman::match_reads () {
 
 	}
 
-	return "";
+	if (highest_j - j < match_score || highest_i - i < match_score) {
+		return false;
+	} else {
+		// concatenate matching strings
+		stringstream ss;
+		if (j < i) {
+			ss << str1.substr(0,highest_i);
+			ss << str2.substr(highest_j, str2.length() - highest_j);
+		} else {
+			ss << str2.substr(0,highest_j);
+			ss << str1.substr(highest_i, str1.length() - highest_i);
+		}
+		matched = ss.str();
+
+		return true;
+	}
 }
-
-/**
- ** 
- ** 
- **/
-// string SmithWaterman::concatString () {
-
-// }
 
 // SmithWaterman::~SmithWaterman() {
 // }

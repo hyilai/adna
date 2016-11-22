@@ -6,6 +6,7 @@
 #include <string.h>
 #include <vector>
 #include <iomanip>
+#include <sstream>
 #include <iostream>
 // #include <pthread.h>
 
@@ -21,7 +22,7 @@ public:
 	std::string get_quality2();
 	std::string get_trimmed();
 	std::string get_matched_string();
-	std::string match_reads();
+	bool match_reads();
 	// ~SmithWaterman();
 private:
 	std::string str1;
@@ -32,6 +33,8 @@ private:
 	std::string q2;		//quality string for str2, would be empty if comparing sequence to adapter
 	int match_score;	//minimum score for matching two reads
 	std::vector<std::vector<int> > grid;
+	int highest_i;
+	int highest_j;
 };
 
 #endif
