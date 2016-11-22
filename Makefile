@@ -1,16 +1,21 @@
 CC = g++
-FILE1 = DNAGeneratorV3.cpp
-FILE2 = randomStringGeneratorV1.cpp
+SWH = SmithWaterman.hpp
+SWCPP = SmithWaterman.cpp
+TESTCPP = test.cpp
+DNAGENCPP = DNAGeneratorV5.cpp
 
-PROG1 = dnaGen
-PROG2 = randStr
+SW = SmithWaterman
+TEST = test
+DNAGEN = dnagen
 
+all: $(SW) $(TEST) 
 
-all: $(PROG1) $(PROG2)
+$(TEST): $(TESTCPP) $(SWCPP) $(SWH)
+	$(CC) -g $(TESTCPP) $(SW).o -o $(TEST)
 
-$(PROG1): $(FILE1)
-	$(CC) $(FILE1) -o $(PROG1)
+$(SW): $(SWCPP) $(SWH)
+	$(CC) -c $(SWCPP) -o $(SW).o
 
-$(PROG2): $(FILE2)
-	$(CC) $(FILE2) -o $(PROG2)
+$(DNAGEN): $(DNAGENCPP)
+	$(CC) -g $(DNAGENCPP) -o $(DNAGEN)
 
