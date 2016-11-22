@@ -23,6 +23,9 @@ int main (int argc, char** argv) {
 	ifstream file(argv[1]);
 	ifstream adpt(argv[2]);
 
+	vector<int> matched_adapter;
+	vector<string> matched_seq;
+	vector<string> trimmed_extra;
 	vector<string> trimmed_seq;
 	vector<string> adapters;
 
@@ -51,9 +54,11 @@ int main (int argc, char** argv) {
 			break;
 		}
 
-		cout << "Reading line " << j++ << "..." << endl;
+		cout << "Reading line " << j+1 << "..." << endl;
+		j++;
 
-		string line1, line2, line3, line4, trimmed;
+		string line1, line2, line3, line4, trimmed, extra, matched;
+		int match_adapt = -1;
 		int highest_score = 0;
 
 		// first line of read
@@ -84,6 +89,9 @@ int main (int argc, char** argv) {
 			if (highest_score < curr_high_score) {
 				highest_score = curr_high_score;
 				trimmed = sw->trim_from_ending();
+				extra = sw->get_trimmed();
+				matched = sw->get_matched_string();
+				match_adapt = i;
 			}
 
 			delete sw;
@@ -96,6 +104,9 @@ int main (int argc, char** argv) {
 		lines++;
 
 		trimmed_seq.push_back(trimmed);
+		trimmed_extra.push_back(extra);
+		matched_seq.push_back(matched);
+		matched_adapter.push_back(match_adapt);
 	}
 
 	file.close();
@@ -103,12 +114,18 @@ int main (int argc, char** argv) {
 
 	string outfile("test_output.txt");
 	ofstream out(outfile.c_str());
+	ofstream out2("trimmed_extra.txt");
 
 	for (int i = 0; i < trimmed_seq.size(); i++) {
-		out << trimmed_seq[i] << "\n";
+		//out << trimmed_seq[i] << "\t\t" << trimmed_extra[i] << "\t\t" << matched_seq[i] << "\t\t" << adapters[matched_adapter[i] ] << "\n";
+		//out << trimmed_seq[i] << "\t\t" << trimmed_extra[i] << "\t\t" << matched_seq[i] << "\n";
+		out << trimmed_seq[i] << "\t\t" << trimmed_extra[i] << "\n";
+		// out << trimmed_seq[i] << endl;
+		// out2 << trimmed_extra[i] << "\t\t" matched_seq[i] << endl;
 	} 
 	
 	out.close();
+	out2.close();
 
 	// for calculations
 	double average_elapsed_time = total_elapsed_time / (double) lines;
