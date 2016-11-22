@@ -126,9 +126,9 @@ int main (int argc, char** argv) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
 	if (my_rank != 0) {
-
+		//MPI_Send();
 	} else {
-
+		//MPI_Recv();
 	}
 
 	MPI_Finalize();
