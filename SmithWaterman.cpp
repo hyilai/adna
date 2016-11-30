@@ -264,19 +264,7 @@ string SmithWaterman::get_matched_string() {
  ** WIP
  **/
 bool SmithWaterman::match_reads () {
-	int highest = 0;
-	int highest_i = 0;
-	int highest_j = 0;
-
-	for (int i = 0; i < grid.size(); i++) {
-		for (int j = 0; j <grid[i].size(); j++) {
-			if (grid[i][j] >= highest) {
-				highest = grid[i][j];
-				highest_i = i;
-				highest_j = j;
-			}
-		}
-	}
+	int highest =  grid[highest_i][highest_j];
 
 	// get matched sequence
 	int curr_score = highest;

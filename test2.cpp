@@ -81,21 +81,18 @@ int main (int argc, char** argv) {
 
 	srand(time(NULL));
 
-	if (argc != 5) {
-		cerr << "Arguments: <number of fragments> <read length> <adapter file> <output file>" << endl;
+	if (argc != 6) {
+		cerr << "Arguments: <number of fragments> <read length> <numer of adapters> <adapter size> <output file>" << endl;
 		exit(1); 
 	}
 
 	int num_lines = atoi(argv[1]);
 	int read_length = atoi(argv[2]);
 
-	ifstream adpt(argv[3]);
-	if (!adpt) {
-		cerr << "Error: cannot open adapter file" << endl;
-		exit(1);
-	}
+	int num_adapters = atoi(argv[3]);
+	int adapter_length = atoi(argv[4]);
 
-	ofstream out(argv[4]);	// result file
+	ofstream out(argv[5]);	// result file
 	ofstream testfile("test_sequences.txt");	// file containing test sequences
 	ofstream stat_file("statistics.csv");		// file dump for a bunch of numbers
 
@@ -110,20 +107,10 @@ int main (int argc, char** argv) {
 	vector<string> adapters;
 
 	// get the list of adapters
-	string ad;
-	while (1) {
-		if (adpt.peek() == EOF) {
-			break;
-		}
-
-		//discard first line
-		getline(adpt, ad);
-
-		//get adapter sequence in the second line
-		getline(adpt, ad);
+	for (int i = 0; i < num_adapters; i++) {
+		string ad = make_extra_DNA(adapter_length);
 		adapters.push_back(ad);
 	}
-	adpt.close();
 
 	// analyze sw
 	int j = 0;
