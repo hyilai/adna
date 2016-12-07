@@ -22,6 +22,11 @@
 
 using namespace std;
 
+const string tru_seq_forward_start = "GATCGGAAGAGCACACGTCTGAACTCCAGTCAC";
+const string tru_seq_forward_end = "ATCTCGTATGCCGTCTTCTGCTTG";
+const string tru_seq_reverse_start = "GTTCGTCTTCTGCCGTATGCTCTA";
+const string tru_seq_reverse_end = "CACTGACCTCAAGTCTGCACACGAGAAGGCTAG";
+
 class SmithWaterman;
 
 // containers
@@ -69,8 +74,6 @@ void parse_file (int start, int end) {
 		file_line[i][3] = quality;
 	}
 
-	file.close();
-	out.close();
 
 	return 0;
 }
