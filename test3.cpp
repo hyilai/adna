@@ -56,7 +56,7 @@ int main (int argc, char** argv) {
 	while(j < num_lines) {
 		cout << "Reading line " << j+1 << "..." << endl;
 		
-		string trimmed, new_extra, matched, info, read, umm, quality;
+		string trimmed, new_extra, matched, info, read, umm, quality, new_quality;
 		int matched_adapter_num;
 		int highest_score = 0;
 
@@ -79,10 +79,11 @@ int main (int argc, char** argv) {
 
 			if (highest_score < curr_high_score) {
 				highest_score = curr_high_score;
-				trimmed = sw->trim_from_ending();
+				trimmed = sw->trim_from_beginning();
 				new_extra = sw->get_trimmed();
 				matched = sw->get_matched_string();
 				matched_adapter_num = i;
+				new_quality = sw->get_quality1();
 			}
 
 			delete sw;
@@ -97,7 +98,7 @@ int main (int argc, char** argv) {
 		out << info << endl;
 		out << trimmed << endl;
 		out << umm << endl;
-		out << quality << endl;
+		out << new_quality << endl;
 
 		//increment loop
 		j++;

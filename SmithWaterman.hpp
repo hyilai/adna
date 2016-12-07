@@ -27,11 +27,11 @@ public:
 private:
 	std::string str1;
 	std::string str2;
-	std::string trimmed;
-	std::string matched;
 	std::string q1;		//quality string for str1
 	std::string q2;		//quality string for str2, would be empty if comparing sequence to adapter
 	int match_score;	//minimum score for matching two reads
+	std::string trimmed;
+	std::string matched;
 	std::vector<std::vector<int> > grid;
 	int highest_i;
 	int highest_j;

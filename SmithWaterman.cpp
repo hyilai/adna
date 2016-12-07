@@ -182,6 +182,7 @@ string SmithWaterman::trim_from_beginning () {
 
 	string trimmed = str1.substr(highest_i, str1.length()-highest_i);
 	q1 = q1.substr(highest_i, q1.length()-highest_i);
+	matched = str1.substr(0, highest_i);
 	return trimmed;
 }
 
