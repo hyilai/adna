@@ -9,7 +9,6 @@
  ************************************************************/
 
 
-
 #include <cstdlib>
 #include <cstdio>
 #include <string.h>
@@ -17,15 +16,14 @@
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <ctime>
 #include <mpi.h>
 #include "SmithWaterman.hpp"
 
 using namespace std;
 
-const string tru_seq_forward_start = "GATCGGAAGAGCACACGTCTGAACTCCAGTCAC";
-const string tru_seq_forward_end = "ATCTCGTATGCCGTCTTCTGCTTG";
-const string tru_seq_reverse_start = "GTTCGTCTTCTGCCGTATGCTCTA";
-const string tru_seq_reverse_end = "CACTGACCTCAAGTCTGCACACGAGAAGGCTAG";
+// universal sequence for tru seq adapters
+const string TRU_SEQ_ADAPTER = "GATCGGAAGAGCACACGTCTGAACTCCAGTCAC";
 
 class SmithWaterman;
 
@@ -34,60 +32,123 @@ vector<vector<string> > file_line;
 vector< vector<string> > trimmed_seq;
 vector<string> adapters;
 
-void parse_file (int start, int end) {
+// void parse_file (int start, int end) {
+void parse_file (char* infile, char* outfile, int min_length) {
+
+	int discarded = 0;
+
+	ifstream in(infile);
+	ofstream out(outfile);
+	string junk_filename = "junk_" + string(outfile);
+	ofstream junk_out(junk_filename.c_str());
 
 	// trim fastq file
 	// read 4 lines in a roll (4 lines = 1 set of data)
-	for (int i = start; i < end; i++) {
+	// for (int i = start; i < end; i++) {
 
-		cout << "Parsing line " << i << "..." << endl;
-		string line1, line2, line3, line4, trimmed, quality;
+	start clock
+	clock_t start_time = clock();
 
-		line1 = file_line[i][0];
-		line2 = file_line[i][1];
-		line3 = file_line[i][2];
-		line4 = file_line[i][3];
+	int j = 0;
+	string info;
+	while (getline(in, info)) {
 
-		for (int i = 0; i < adapters.size(); i++) {
+		if (j % 100 == 0) {
+			cout << "Reading line " << j+1 << "..." << endl;
+			j++;
+		}
+		
+		string read, extra, quality;
+		string read, trimmed_junk, junk_quality, new_quality;
+		int highest_score = 0;
 
-			SmithWaterman* sw = new SmithWaterman(line2,adapters[i], line4, "", 0);
+		// read lines from the input file
+		// getline(in, info); // get fastq read info
+		getline(in, read); // get read info
+		getline(in, extra); // N/A
+		getline(in, quality); // get the quality scores
+		
 
-			// string temp = sw->trim_both_sides();	// trim read
+		// for (int i = 0; i < adapters.size(); i++) {
 
-			if (temp.length() > 0 && temp.length() < line2.length()) {
-				trimmed = temp;
-				quality = sw->get_quality1();	// get trimmed quality control string
+			SmithWaterman* sw = new SmithWaterman(read, TRU_SEQ_ADAPTER, quality, "", 0);
+
+			int curr_high_score = sw->get_highest_score();
+
+			if (highest_score < curr_high_score) {
+				highest_score = curr_high_score;
+				read = sw->trim_from_ending();
+				new_quality = sw->get_quality1();
+				trimmed_junk = sw->get_trimmed();
+				junk_quality = sw->get_trimmed_quality();
 			}
 
-			trimmed_seq[j].push_back(temp);
-
 			delete sw;
+		// }
+
+		if (read.length() >= min_length) {
+			// write to output file
+			out << info << endl
+				<< read << endl
+				<< extra << endl
+				<< new_quality << endl;
+
+			// write to junk output file
+			junk_out << info << endl
+					 << trimmed_junk << endl
+					 << extra << endl
+					 << junk_quality << endl;
+		} else {
+			discard++;
 		}
 
-		// output new data
-		//out << line1 << endl
-		//	<< trimmed << endl
-		//	<< line3 << endl
-		//	<< quality << endl;
-		// WIP; put them into the vector for now
-		file_line[i][1] = trimmed;
-		file_line[i][3] = quality;
 	}
 
+	// end timer
+	clock_t end_time = clock();
 
-	return 0;
+	// find elapsed time
+	double elapsed_time = (end_time - start_time) / (double) CLOCKS_PER_SEC;
+	int elapsed_sec, elapsed_min, elapsed_hrs, elapsed_days;
+	elapsed_sec = (int) elapsed_time;
+	elapsed_min = (elapsed_sec > 0) ? elapsed_sec / 60 : 0;
+	elapsed_hrs = (elapsed_min > 0) ? elapsed_min / 60 : 0;
+	elapsed_days = (elapsed_hrs > 0) ? elapsed_hrs / 24 : 0;
+
+	// print elapsed time
+	cout << "Elapsed time: " 
+		 << elapsed_days << " days " 
+		 << elapsed_hrs << " hrs " 
+		 << elapsed_min << " min " 
+		 << elapsed_sec << " s" << endl;
+
+	// print number of discarded reads
+	cout << "Number of discarded reads due to being trimmed too short: " << discarded << endl;
+
+
+	in.close();
+	out.close();
+	junk_out.close();
+
+	return;
 }
 
 
 int main (int argc, char** argv) {
 
-	if (argc != 4) {
-		cerr << "Arguments: <fastq_file> <adapter_file> <output_file>" << endl;
+	if (argc < 6) {
+		cerr << "Arguments: <fastq_file> <adapter_file> <output_file> <minimum length of trimmed read> <number of lines (optional)>" << endl;
 		exit(1); 
 	}
 
-	ifstream file(argv[1]);
+	// ifstream file(argv[1]);
 	ifstream adpt(argv[2]);
+
+	int minimum_read_length = atoi(argv[4]);
+	int num_lines = -1;
+	if (argc == 6) {
+		num_lines = atoi(argv[5]);
+	}
 
 	// get the list of adapters
 	string ad;
@@ -103,38 +164,78 @@ int main (int argc, char** argv) {
 		getline(adpt, ad);
 		adapters.push_back(ad);
 	}
+	adpt.close();
+
+
+	//Match 2 reads and put them together
+	// string info;
+	// while (getline(file, info)) {
+
+	// 	string sequence, line3, quality, matched_string;
+	// 	getline(file, sequence);
+	// 	getline(file, line3);
+	// 	getline(file, quality);
+
+	// 	for (int i = 0; i < adapters.size(); i++) {
+	// 		SmithWaterman* sw = new SmithWaterman(sequence, adapters[i], quality, "", minimum_match_score);
+
+
+	// 		bool is_Matched = false;
+	// 		int curr_high_score = sw->get_highest_score();
+
+	// 		if (highest_score < curr_high_score) {
+	// 			highest_score = curr_high_score;
+	// 			is_Matched = sw->match_reads();
+	// 			if(is_Matched) {
+	// 				matched_string = sw->get_matched_string();
+	// 			}
+	// 			else {
+	// 				matched_string = "";
+	// 			}
+	// 		}
+
+	// 		delete sw;
+	// 	}
+	// }
+	
 
 	// get all file lines
-	string line;
-	while (getline(file,line)) {
-		vector<string> line_group;
-		line_group.push_back(line);	// first line; information of the read
-		getline(file, line);
-		line_group.push_back(line);	// second line; sequence read
-		getline(file, line);
-		line_group.push_back(line);	// third line
-		getline(file, line);
-		line_group.push_back(line);	// fourth line; quality control
-		file_lines.push_back(line_group);
-	}
+	// string line;
+	// while (getline(file,line)) {
+	// 	vector<string> line_group;
+	// 	line_group.push_back(line);	// first line; information of the read
+	// 	getline(file, line);
+	// 	line_group.push_back(line);	// second line; sequence read
+	// 	getline(file, line);
+	// 	line_group.push_back(line);	// third line
+	// 	getline(file, line);
+	// 	line_group.push_back(line);	// fourth line; quality control
+	// 	file_lines.push_back(line_group);
+	// }
 
-	ofstream out(argv[3]);
+
+	// ofstream out(argv[3]);
+	// string junk_filename = "junk" + string(argv[3]);
+	// ofstream out(junk_filename.c_str());
+
+	parse_file(argv[1], argv[3], minimum_read_length);
+
 
 	// set up MPI stuff
-	int comm_sz;
-	int my_rank;
+	// int comm_sz;
+	// int my_rank;
 
-	MPI_Init(NULL,NULL);
-	MPI_comm_size(MPI_COMM_WORLD, &comm_sz);
-	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+	// MPI_Init(NULL,NULL);
+	// MPI_comm_size(MPI_COMM_WORLD, &comm_sz);
+	// MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-	if (my_rank != 0) {
-		//MPI_Send();
-	} else {
-		//MPI_Recv();
-	}
+	// if (my_rank != 0) {
+	// 	//MPI_Send();
+	// } else {
+	// 	//MPI_Recv();
+	// }
 
-	MPI_Finalize();
+	// MPI_Finalize();
 
 	return 0;
 }

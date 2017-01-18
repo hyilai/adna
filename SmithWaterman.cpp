@@ -180,10 +180,12 @@ string SmithWaterman::trim_both_sides () {
  **/	
 string SmithWaterman::trim_from_beginning () {
 
-	string trimmed = str1.substr(highest_i, str1.length()-highest_i);
+	string r = str1.substr(highest_i, str1.length()-highest_i);
 	q1 = q1.substr(highest_i, q1.length()-highest_i);
+	trimmed = str1.substr(0, highest_i);
+	trimmed_q = q1.substr(0, highest_i);
 	matched = str1.substr(0, highest_i);
-	return trimmed;
+	return r;
 }
 
 
@@ -238,6 +240,7 @@ string SmithWaterman::trim_from_ending () {
 	q1 = q1.substr(0,i);
 
 	trimmed = str1.substr(i,str1.length()-i);
+	trimmed_q = q1.substr(i,q1.length()-i);
 	matched = str1.substr(i,highest_i-i);
 
 	// cout << i << " " << r << endl;
@@ -246,6 +249,10 @@ string SmithWaterman::trim_from_ending () {
 
 string SmithWaterman::get_quality1 () {
 	return q1;
+}
+
+string SmithWaterman::get_trimmed_quality () {
+	return trimmed_q;
 }
 
 string SmithWaterman::get_quality2 () {

@@ -81,21 +81,22 @@ int main (int argc, char** argv) {
 
 	srand(time(NULL));
 
-	if (argc != 5) {
-		cerr << "Arguments: <number of fragments> <read length> <adapter file> <output file>" << endl;
+	if (argc != 6) {
+		cerr << "Arguments: <number of fragments> <read length> <minimum length of cut read> <adapter file> <output file>" << endl;
 		exit(1); 
 	}
 
 	int num_lines = atoi(argv[1]);
 	int read_length = atoi(argv[2]);
+	int min_cut_length = atoi(argv[3]);
 
-	ifstream adpt(argv[3]);
+	ifstream adpt(argv[4]);
 	if (!adpt) {
 		cerr << "Error: cannot open adapter file" << endl;
 		exit(1);
 	}
 
-	ofstream out(argv[4]);	// result file
+	ofstream out(argv[5]);	// result file
 	ofstream testfile("test_sequences.txt");	// file containing test sequences
 	ofstream stat_file("statistics.csv");		// file dump for a bunch of numbers
 

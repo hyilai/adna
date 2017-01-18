@@ -19,16 +19,17 @@ int main (int argc, char** argv) {
 
 	srand(time(NULL));
 
-	if (argc != 5) {
-		cerr << "Arguments: <number of lines> <input file> <adapter file> <output file>" << endl;
+	if (argc != 6) {
+		cerr << "Arguments: <number of lines> <input file> <minimum length of trimmed read> <adapter file> <output file>" << endl;
 		exit(1); 
 	}
 
 	int num_lines = atoi(argv[1]);
 
 	ifstream in(argv[2]); // Input file
-	ifstream in_adapter(argv[3]); // adapter file
-	ofstream out(argv[4]);	// result file
+	int min_cut_length(argv[3]); // minimum length of read after it's trimmed
+	ifstream in_adapter(argv[4]); // adapter file
+	ofstream out(argv[5]);	// result file
 
 
 	// containers
@@ -79,7 +80,7 @@ int main (int argc, char** argv) {
 
 			if (highest_score < curr_high_score) {
 				highest_score = curr_high_score;
-				trimmed = sw->trim_from_beginning();
+				trimmed = sw->trim_from_ending();
 				new_extra = sw->get_trimmed();
 				matched = sw->get_matched_string();
 				matched_adapter_num = i;
@@ -94,11 +95,13 @@ int main (int argc, char** argv) {
 		clock_t end_time = clock();
 
 
-		// output file
-		out << info << endl;
-		out << trimmed << endl;
-		out << umm << endl;
-		out << new_quality << endl;
+		if (trimmed.length() >= min_cut_length) {
+			// output file
+			out << info << endl;
+			out << trimmed << endl;
+			out << umm << endl;
+			out << quality << endl;
+		}
 
 		//increment loop
 		j++;
