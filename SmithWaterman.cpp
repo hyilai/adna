@@ -22,7 +22,7 @@ typedef vector<vector<int> > Grid;
 
 //gap-scoring scheme
 #define GAP_EXTENSION 10
-#define GAP_PENALTY 12
+#define GAP_PENALTY 20
 
 
 class functions {
@@ -180,11 +180,11 @@ string SmithWaterman::trim_both_sides () {
  **/	
 string SmithWaterman::trim_from_beginning () {
 
-	string r = str1.substr(highest_i, str1.length()-highest_i);
-	q1 = q1.substr(highest_i, q1.length()-highest_i);
 	trimmed = str1.substr(0, highest_i);
 	trimmed_q = q1.substr(0, highest_i);
 	matched = str1.substr(0, highest_i);
+	string r = str1.substr(highest_i, str1.length()-highest_i);
+	q1 = q1.substr(highest_i, q1.length()-highest_i);
 	return r;
 }
 
@@ -235,13 +235,13 @@ string SmithWaterman::trim_from_ending () {
 		j = next_j;
 
 	}
-	
-	string r = str1.substr(0,i);
-	q1 = q1.substr(0,i);
 
 	trimmed = str1.substr(i,str1.length()-i);
 	trimmed_q = q1.substr(i,q1.length()-i);
 	matched = str1.substr(i,highest_i-i);
+	
+	string r = str1.substr(0,i);
+	q1 = q1.substr(0,i);
 
 	// cout << i << " " << r << endl;
 	return r;

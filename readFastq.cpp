@@ -17,7 +17,7 @@
 #include <iostream>
 #include <fstream>
 #include <ctime>
-#include <mpi.h>
+// #include <mpi.h>
 #include "SmithWaterman.hpp"
 
 using namespace std;
@@ -33,7 +33,7 @@ vector< vector<string> > trimmed_seq;
 vector<string> adapters;
 
 // void parse_file (int start, int end) {
-void parse_file (char* infile, char* outfile, int min_length) {
+void trim_reads (char* infile, char* outfile, int min_length) {
 
 	int discarded = 0;
 
@@ -46,7 +46,7 @@ void parse_file (char* infile, char* outfile, int min_length) {
 	// read 4 lines in a roll (4 lines = 1 set of data)
 	// for (int i = start; i < end; i++) {
 
-	start clock
+	//start clock
 	clock_t start_time = clock();
 
 	int j = 0;
@@ -55,23 +55,24 @@ void parse_file (char* infile, char* outfile, int min_length) {
 
 		if (j % 100 == 0) {
 			cout << "Reading line " << j+1 << "..." << endl;
-			j++;
 		}
 		
-		string read, extra, quality;
+		j++;
+		
+		string sequence, extra, quality;
 		string read, trimmed_junk, junk_quality, new_quality;
 		int highest_score = 0;
 
 		// read lines from the input file
 		// getline(in, info); // get fastq read info
-		getline(in, read); // get read info
+		getline(in, sequence); // get read info
 		getline(in, extra); // N/A
 		getline(in, quality); // get the quality scores
 		
 
 		// for (int i = 0; i < adapters.size(); i++) {
 
-			SmithWaterman* sw = new SmithWaterman(read, TRU_SEQ_ADAPTER, quality, "", 0);
+			SmithWaterman* sw = new SmithWaterman(sequence, TRU_SEQ_ADAPTER, quality, "", 0);
 
 			int curr_high_score = sw->get_highest_score();
 
@@ -99,7 +100,7 @@ void parse_file (char* infile, char* outfile, int min_length) {
 					 << extra << endl
 					 << junk_quality << endl;
 		} else {
-			discard++;
+			discarded++;
 		}
 
 	}
@@ -116,15 +117,15 @@ void parse_file (char* infile, char* outfile, int min_length) {
 	elapsed_days = (elapsed_hrs > 0) ? elapsed_hrs / 24 : 0;
 
 	// print elapsed time
-	cout << "Elapsed time: " 
-		 << elapsed_days << " days " 
-		 << elapsed_hrs << " hrs " 
-		 << elapsed_min << " min " 
-		 << elapsed_sec << " s" << endl;
+	cout << "Elapsed time: ";
+	if (elapsed_days > 0) cout << elapsed_days << " days ";
+	if (elapsed_hrs > 0) cout << elapsed_hrs << " hrs ";
+	if (elapsed_min > 0) cout << elapsed_min << " min ";
+	cout << elapsed_sec << " s" << endl;
 
 	// print number of discarded reads
+	cout << "Total number of reads: " << j << endl;
 	cout << "Number of discarded reads due to being trimmed too short: " << discarded << endl;
-
 
 	in.close();
 	out.close();
@@ -136,7 +137,7 @@ void parse_file (char* infile, char* outfile, int min_length) {
 
 int main (int argc, char** argv) {
 
-	if (argc < 6) {
+	if (argc < 5) {
 		cerr << "Arguments: <fastq_file> <adapter_file> <output_file> <minimum length of trimmed read> <number of lines (optional)>" << endl;
 		exit(1); 
 	}
@@ -218,7 +219,7 @@ int main (int argc, char** argv) {
 	// string junk_filename = "junk" + string(argv[3]);
 	// ofstream out(junk_filename.c_str());
 
-	parse_file(argv[1], argv[3], minimum_read_length);
+	trim_reads(argv[1], argv[3], minimum_read_length);
 
 
 	// set up MPI stuff
