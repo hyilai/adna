@@ -8,6 +8,7 @@
 #include <fstream>
 #include <ctime>
 #include "SmithWaterman.hpp"
+#include <mpi.h>
 // #include <pthread.h>
 
 using namespace std;
@@ -20,7 +21,11 @@ class SmithWaterman;
 int main (int argc, char** argv) {
 
 	srand(time(NULL));
-
+	
+	int comm_sz;    /* number of processes  */
+    	int my_rank;    /* process rank         */
+	
+	
 	if (argc != 3) {
 		cerr << "Arguments: <minimum matching score> <output file>" << endl;
 		exit(1); 
@@ -41,11 +46,24 @@ int main (int argc, char** argv) {
 
 	// clock start
 	clock_t start = clock();
+	
+	//
+	string info1;
+	string info2;
 
-	string info1, sequence1, na1, quality1;
-	string info2, sequence2, na2, quality2;
+	//Initialize the command line arguments on every process
+    	MPI_Init(&argc, &argv);
+	
+	//Get the number of processes in MPI_COMM_WORLD, and put 
+	//it in the 'comm_sz" variable
+	MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
+	
 	while(getline(in1, info1) && getline(in2, info2)) {
 
+		//
+		string sequence1, na1, quality1;
+		string sequence2, na2, quality2;
+		
 		// read lines from in1
 		getline(in1, sequence1);
 		getline(in1, na1);
@@ -99,7 +117,11 @@ int main (int argc, char** argv) {
 		//increment loop
 		j++;
 	}
-
+	
+	/*Inform MPI that this process has finished*/
+	MPI_Finalize();
+	
+	
 	// clock ends
 	clock_t end = clock();
 	double total_time_passed = double(end - start) / CLOCKS_PER_SEC;
