@@ -18,11 +18,11 @@ typedef vector<vector<int> > Grid;
 
 //similarity function
 #define MATCH 5
-#define MISMATCH -15
+#define MISMATCH -10
 
 //gap-scoring scheme
 #define GAP_EXTENSION 10
-#define GAP_PENALTY 20
+#define GAP_PENALTY 7
 
 
 class functions {
@@ -59,14 +59,14 @@ public:
 
 				//deletion
 				for (int k = i-1; k > 0; k--) {
-					int temp = grid[i-k][j] + gap(k);
+					int temp = grid[i-k][j] + gap(k, grid[i-k][j]);
 					if (deletion < temp) deletion = temp;
 				}
 
 				//insertion
 				for (int l = j-1; l > 0; l--) {
-					int temp = grid[i][j-l] + gap(l);
-					if (deletion < temp) insertion = temp;
+					int temp = grid[i][j-l] + gap(l, grid[i][j-l]);
+					if (insertion < temp) insertion = temp;
 				}
 
 				//find maximum between the three
@@ -121,24 +121,52 @@ private:
 	int highest_i;
 	int highest_j;
 	
-	int gap (int i) {
-		return -(GAP_PENALTY + (GAP_EXTENSION * i) );
+	int gap (int i, int prev_score) {
+		int n = prev_score / MATCH;
+		return -(GAP_PENALTY / (n + 1) + GAP_EXTENSION) * i;
 	}
 
 	int similarity (string str1, string str2, int i, int j) {
 		char a = str1[i-1];
 		char b = str2[j-1];
 		
-		if (grid[i-1][j-1] > 0) {
+		if (j - 1 == 0) {
 			return (a == b) ? MATCH : MISMATCH;
 		} else {
-			return (a == b) ? MATCH - (j-1) : MISMATCH;
+			if (grid[i-1][j-1] > 0) {
+				return (a == b) ? MATCH : MISMATCH;
+			} else {
+				return (a == b) ? MATCH - j*j : MISMATCH;
+			}
 		}
 	}
 };
 
 
-SmithWaterman::SmithWaterman (string str1, string str2, string q1, string q2, int match_score) : str1(str1), str2(str2), q1(q1), q2(q2), match_score(match_score) {
+SmithWaterman::SmithWaterman (string str1, string str2, string q1, int match_length) : str1(str1), str2(str2), q1(q1), match_length(match_length) {
+	
+	q2 = "";
+	trimmed = "";
+	functions f;
+
+	int m = str1.length();
+	int n = str2.length();
+
+	if (m == 0 || n == 0) {
+		cout << "Error: string(s) length is zero" << endl;
+		exit(EXIT_FAILURE);
+	}
+
+	grid = f.build_grid(str1, str2);
+
+	highest_i = f.get_highest_i();
+	highest_j = f.get_highest_j();
+
+	//f.print_grid(str1,str2,grid);
+}
+
+
+SmithWaterman::SmithWaterman (string str1, string str2, string q1, string q2, int match_length) : str1(str1), str2(str2), q1(q1), q2(q2), match_length(match_length) {
 	
 	trimmed = "";
 	functions f;
@@ -180,18 +208,24 @@ string SmithWaterman::trim_both_sides () {
  **/	
 string SmithWaterman::trim_from_beginning () {
 
-	trimmed = str1.substr(0, highest_i);
-	trimmed_q = q1.substr(0, highest_i);
-	matched = str1.substr(0, highest_i);
-	string r = str1.substr(highest_i, str1.length()-highest_i);
-	q1 = q1.substr(highest_i, q1.length()-highest_i);
+	string r = str1;
+	if (highest_i >= match_length) {
+		trimmed = str1.substr(0, highest_i);
+		trimmed_q = q1.substr(0, highest_i);
+		matched = str1.substr(0, highest_i);
+		r = str1.substr(highest_i, str1.length()-highest_i);
+		q1 = q1.substr(highest_i, q1.length()-highest_i);
+	} else {
+		trimmed = "";
+		trimmed_q = "";
+		matched = "";
+	}
 	return r;
 }
 
 
 /**
- ** This function trims ending adapter from 
- ** sequence read
+ ** This function trims ending adapter from sequence read
  **/	
 string SmithWaterman::trim_from_ending () {
 
@@ -236,12 +270,20 @@ string SmithWaterman::trim_from_ending () {
 
 	}
 
-	trimmed = str1.substr(i,str1.length()-i);
-	trimmed_q = q1.substr(i,q1.length()-i);
-	matched = str1.substr(i,highest_i-i);
-	
-	string r = str1.substr(0,i);
-	q1 = q1.substr(0,i);
+	string r = str1;
+
+	if (highest_i - i >= match_length) {
+		trimmed = str1.substr(i,str1.length()-i);
+		trimmed_q = q1.substr(i,q1.length()-i);
+		matched = str1.substr(i,highest_i-i);
+		
+		r = str1.substr(0,i);
+		q1 = q1.substr(0,i);
+	} else {
+		trimmed = "";
+		trimmed_q = "";
+		matched = "";
+	}
 
 	// cout << i << " " << r << endl;
 	return r;
@@ -267,9 +309,13 @@ string SmithWaterman::get_matched_string() {
 	return matched;
 }
 
+string SmithWaterman::get_matched_quality() {
+	return matched_q;
+}
+
 
 /**
- ** WIP
+ ** find the matching substring between the two reads and concatenate them
  **/
 bool SmithWaterman::match_reads () {
 	int highest =  grid[highest_i][highest_j];
@@ -311,19 +357,25 @@ bool SmithWaterman::match_reads () {
 
 	}
 
-	if (highest_j - j < match_score || highest_i - i < match_score) {
+	if (highest_j - j < match_length || highest_i - i < match_length) {
 		return false;
 	} else {
 		// concatenate matching strings
 		stringstream ss;
+		stringstream ss_q;
 		if (j < i) {
 			ss << str1.substr(0,highest_i);
 			ss << str2.substr(highest_j, str2.length() - highest_j);
+			ss_q << q1.substr(0,highest_i);
+			ss_q << q2.substr(highest_j, str2.length() - highest_j);
 		} else {
 			ss << str2.substr(0,highest_j);
 			ss << str1.substr(highest_i, str1.length() - highest_i);
+			ss_q << q2.substr(0,highest_j);
+			ss_q << q1.substr(highest_i, str1.length() - highest_i);
 		}
 		matched = ss.str();
+		matched_q = ss_q.str();
 
 		return true;
 	}
@@ -332,8 +384,8 @@ bool SmithWaterman::match_reads () {
 // SmithWaterman::~SmithWaterman() {
 // }
 
-// extern "C" SmithWaterman* create(string str1, string str2, int match_score) {
-// 	return new SmithWaterman(str1, str2, match_score);
+// extern "C" SmithWaterman* create(string str1, string str2, int match_length) {
+// 	return new SmithWaterman(str1, str2, match_length);
 // }
 
 
