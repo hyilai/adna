@@ -57,14 +57,17 @@ bool strip_t (string &sequence, string &quality) {
 }
 
 
-// finds bases with score less than 15
-int quality_score_sum (string quality) {
-	int score = 0;
+// finds bases with score less than 15 (more than 5: fails)
+bool quality_check (string quality) {
+	int num_failed = 0;
 	for (int i = 0; i < quality.length(); i++) {
 		char cur = quality[i];
-		score += (int(cur) - 33);	// adjust ascii value for base 33 quality strings
+		if (int(cur) - 33 < 15) {	// adjust ascii value for base 33 quality strings
+			num_failed++;
+		}
+		if (num_failed > 5) return false;
 	}
-	return score;
+	return true;
 }
 
 
@@ -182,7 +185,7 @@ bool is_same_coord (Coordinate coord1, Coordinate coord2) {
 // void parse_file (int start, int end) {
 void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapter_file) {
 
-	int discarded1 = 0, discarded2 = 0, num_concat = 0;
+	int discarded1 = 0, discarded2 = 0, num_concat = 0, num_final = 0;
 
 	// files for infile1
 	ifstream in1(infile1);
@@ -211,6 +214,8 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 	// file for concatenated reads
 	string concat_out_filename = "concat_" + string(outfile);
 	ofstream concat_out(concat_out_filename.c_str());
+	string final_out_filename = "final_" + string(outfile);
+	ofstream final_out(final_out_filename.c_str());
 
 
 	// trim fastq file
@@ -316,6 +321,8 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 							   << junk_quality2 << endl;
 		}
 
+		bool has_concat = false;
+		string concatenated, new_quality;
 
 		// concatenate reads
 		if (read1.length() >= minimum_read_length && read2.length() >= minimum_read_length) {
@@ -330,12 +337,11 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 				// 		 << "read 2: (" << coord2.x << "," << coord2.y << ")" << endl;
 				// }
 
-				string concatenated, new_quality;
-
 				concatenated = concat_reads(read1, read2, quality1, quality2, new_quality);
 
 				if (concatenated.length() > 0) {
 					num_concat++;
+					has_concat = true;
 
 					concat_out << info1 << endl
 							   << concatenated << endl
@@ -347,6 +353,18 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 					 << "read 1: (" << coord1.x << "," << coord1.y << "), "
 					 << "read 2: (" << coord2.x << "," << coord2.y << ")" 
 					 << "}...";
+			}
+		}
+
+		if (has_concat) {
+			bool pass_quality = quality_check(new_quality);
+			if (pass_quality) {
+				num_final++;
+
+				final_out << info1 << endl
+						  << concatenated << endl
+						  << extra1 << endl
+						  << new_quality << endl;
 			}
 		}
 
@@ -381,6 +399,7 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 	cout << "Number of discarded reads in file 1 due to being trimmed too short: " << discarded1 << endl;
 	cout << "Number of discarded reads in file 2 due to being trimmed too short: " << discarded2 << endl;
 	cout << "Number of concatenated reads: " << num_concat << endl;
+	cout << "NUmber of reads that passed quality check: " << num_final << endl;
 
 
 	in1.close();
@@ -397,6 +416,7 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 	junk_discarded_out2.close();
 
 	concat_out.close();
+	final_out.close();
 
 	return;
 }
