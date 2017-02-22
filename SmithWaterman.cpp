@@ -18,7 +18,7 @@ typedef vector<vector<int> > Grid;
 
 //similarity function
 #define MATCH 5
-#define MISMATCH -10
+#define MISMATCH -8
 
 //gap-scoring scheme
 #define GAP_EXTENSION 10
@@ -35,47 +35,47 @@ public:
 
 		int m = str1.length();
 		int n = str2.length();
-		grid.resize(m+1, vector<int>(n+1, 0));
 
-		// cout << str1 << " " << str2 << " " << n << endl;
+		// make a grid of size m by n
+		grid.resize(m+1, vector<int>(n+1, 0));
 
 		int highest = 0;
 		highest_i = 0;
 		highest_j = 0;
 
+		// for each cell in the grid
 		for (int i = 1; i < grid.size(); i++) {
 			char a = str1[i-1];
 			for (int j = 1; j < grid[i].size(); j++) {
 				char b = str2[j-1];
 
-				int score = 0;
-				int match = 0;
-				int deletion = 0;
-				int insertion = 0;
+				int score = 0, match = 0, deletion = 0, insertion = 0;
 
-				//match/mismatch
+				// match/mismatch score
 				int s = similarity(str1, str2, i, j);
 				match = grid[i-1][j-1] + s;
 
-				//deletion
+				// deletion score
 				for (int k = i-1; k > 0; k--) {
 					int temp = grid[i-k][j] + gap(k, grid[i-k][j]);
 					if (deletion < temp) deletion = temp;
 				}
 
-				//insertion
+				// insertion score
 				for (int l = j-1; l > 0; l--) {
 					int temp = grid[i][j-l] + gap(l, grid[i][j-l]);
 					if (insertion < temp) insertion = temp;
 				}
 
-				//find maximum between the three
+				// find maximum between the three; minimum score is 0
 				score = (score < match) ? match : score;
 				score = (score < deletion) ? deletion : score;
 				score = (score < insertion) ? insertion : score;
 
+				// set cell to the maximum score
 				grid[i][j] = score;
 
+				// remember the highest score in the grid
 				if (score > highest) {
 					highest = score;
 					highest_i = i;
@@ -123,6 +123,7 @@ private:
 	
 	int gap (int i, int prev_score) {
 		int n = prev_score / MATCH;
+		// original: -(GAP_PENALTY + GAP_EXTENSION * i)
 		return -(GAP_PENALTY / (n + 1) + GAP_EXTENSION) * i;
 	}
 
@@ -130,12 +131,15 @@ private:
 		char a = str1[i-1];
 		char b = str2[j-1];
 		
+		// if we're matching against the first character in str2
 		if (j - 1 == 0) {
 			return (a == b) ? MATCH : MISMATCH;
 		} else {
+
+			// if the last set of characters matched between str1 and str2
 			if (grid[i-1][j-1] > 0) {
 				return (a == b) ? MATCH : MISMATCH;
-			} else {
+			} else {	// else return a harsher score
 				return (a == b) ? MATCH - j*j : MISMATCH;
 			}
 		}
@@ -229,10 +233,6 @@ string SmithWaterman::trim_from_beginning () {
  **/	
 string SmithWaterman::trim_from_ending () {
 
-	//cout << highest_i << "," << highest_j << endl;
-	//functions f;
-	//f.print_grid(str1, str2, grid);
-
 	//get trimmed sequence
 	int curr_score = grid[highest_i][highest_j];	//highest score in the grid
 	int i = highest_i;
@@ -243,13 +243,13 @@ string SmithWaterman::trim_from_ending () {
 		int upper_left = grid[i-1][j-1];
 		int upper = grid[i-1][j];
 
-		int next_i = i-1;
-		int next_j = j-1;
+		int next_i, next_j;
 		int next_highest = 0;
 
 		if (left > next_highest) {
 			//left is biggest
 			next_highest = left;
+			next_i = i;
 			next_j = j-1;
 		}
 		if (upper_left > next_highest) {
@@ -262,23 +262,25 @@ string SmithWaterman::trim_from_ending () {
 			//upper is bigest
 			next_highest = upper;
 			next_i = i-1;
+			next_j = j;
 		}
 
 		curr_score = next_highest;
 		i = next_i;
 		j = next_j;
-
 	}
 
 	string r = str1;
 
+	// trim only if the length of the matching substring is more than the threshold
+	// everything after the matching substring is thrown out as well
 	if (highest_i - i >= match_length) {
-		trimmed = str1.substr(i,str1.length()-i);
-		trimmed_q = q1.substr(i,q1.length()-i);
-		matched = str1.substr(i,highest_i-i);
+		trimmed = str1.substr(i-1, str1.length() - i);
+		trimmed_q = q1.substr(i-1, q1.length() - i);
+		matched = str1.substr(i-1, highest_i - i);
 		
-		r = str1.substr(0,i);
-		q1 = q1.substr(0,i);
+		r = str1.substr(0, i);
+		q1 = q1.substr(0, i);
 	} else {
 		trimmed = "";
 		trimmed_q = "";
@@ -318,9 +320,11 @@ string SmithWaterman::get_matched_quality() {
  ** find the matching substring between the two reads and concatenate them
  **/
 bool SmithWaterman::match_reads () {
+
+	// get the highest score in the grid
 	int highest =  grid[highest_i][highest_j];
 
-	// get matched sequence
+	// go back through the grid to find the matching subsequence
 	int curr_score = highest;
 	int i = highest_i;
 	int j = highest_j;
@@ -330,13 +334,13 @@ bool SmithWaterman::match_reads () {
 		int upper_left = grid[i-1][j-1];
 		int upper = grid[i-1][j];
 
-		int next_i = i-1;
-		int next_j = j-1;
+		int next_i, next_j;
 		int next_highest = 0;
 
 		if (left > next_highest) {
 			//left is biggest
 			next_highest = left;
+			next_i = i;
 			next_j = j-1;
 		}
 		if (upper_left > next_highest) {
@@ -346,34 +350,30 @@ bool SmithWaterman::match_reads () {
 			next_j = j-1;
 		}
 		if (upper > next_highest) {
-			//upper is bigest
+			//upper is biggest
 			next_highest = upper;
 			next_i = i-1;
+			next_j = j;
 		}
 
 		curr_score = next_highest;
 		i = next_i;
 		j = next_j;
-
 	}
 
+
+	// if the length of the matching subsequence is less than the minimum match length do nothing
 	if (highest_j - j < match_length || highest_i - i < match_length) {
 		return false;
-	} else {
+	} else {	// else concatenate the two strings togther
 		// concatenate matching strings
 		stringstream ss;
 		stringstream ss_q;
-		if (j < i) {
-			ss << str1.substr(0,highest_i);
-			ss << str2.substr(highest_j, str2.length() - highest_j);
-			ss_q << q1.substr(0,highest_i);
-			ss_q << q2.substr(highest_j, str2.length() - highest_j);
-		} else {
-			ss << str2.substr(0,highest_j);
-			ss << str1.substr(highest_i, str1.length() - highest_i);
-			ss_q << q2.substr(0,highest_j);
-			ss_q << q1.substr(highest_i, str1.length() - highest_i);
-		}
+		ss << str1.substr(0, highest_i);
+		ss << str2.substr(highest_j - 1, str2.length() - highest_j);
+		ss_q << q1.substr(0, highest_i);
+		ss_q << q2.substr(highest_j - 1, str2.length() - highest_j);
+		
 		matched = ss.str();
 		matched_q = ss_q.str();
 
