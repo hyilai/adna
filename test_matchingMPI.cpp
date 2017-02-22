@@ -43,14 +43,14 @@ int main (int argc, char** argv) {
 
 	
 	//Hash table 
-	unordered_map <Coordinate, DNAread> myMap;
+	unordered_map <Coordinate, DNAread*> myMap;
 	
 	string info1, sequence1, na1, quality1;
-	while(getline(in1, info1) && getline(in2, info2)) {
+	while(getline(in1, info1)) {
 
 		// read lines from in1
 		stringstream ss;
-		ss.str(info1)
+		ss.str(info1);
 		string token;
 		for (int i = 0; i < 5; i++) {
 			getline(ss, token, ':');
@@ -95,7 +95,6 @@ int main (int argc, char** argv) {
 	clock_t start = clock();
 	
 	//
-	string info2;
 
 	//Initialize the command line arguments on every process
 	MPI_Init(&argc, &argv);
@@ -107,10 +106,10 @@ int main (int argc, char** argv) {
 
 	int counter = 0;
 	
-	while(getline(in1, info1) && getline(in2, info2)) {
-
-
-		printf("%d %d \n", counter % comm_sz, my_rank );
+	string info2;
+	while(getline(in2, info2)) {
+		
+// 		printf("%d %d \n", counter % comm_sz, my_rank );
 
 		if((counter % comm_sz) ==  my_rank) {
 
@@ -118,69 +117,78 @@ int main (int argc, char** argv) {
 			string sequence2, na2, quality2;
 			
 			// read lines from in1
-			getline(in1, sequence1);
-			getline(in1, na1);
-			getline(in1, quality1);
-
-			// read lines from in2
 			getline(in2, sequence2);
 			getline(in2, na2);
 			getline(in2, quality2);
 
 			cout << "Reading line " << j+1 << "..." << endl;
-
-			string matched = "";
-			int highest_score = 0;
-
-			// start clock for sw algorithm
-			clock_t start_time = clock();
-
-			// check one direction
-			SmithWaterman* sw = new SmithWaterman(sequence1, sequence2, quality1, quality2, match_score);
-			int curr_high_score = sw->get_highest_score();
-			if (highest_score < curr_high_score) {
-				if (sw->match_reads()) {
-					matched = sw->get_matched_string();
-				}
-			}
-			delete sw;
-
-			// check the other direction
-			sw = new SmithWaterman(sequence2, sequence1, quality2, quality1, match_score);
-			curr_high_score = sw->get_highest_score();
-			if (highest_score < curr_high_score) {
-				if (sw->match_reads()) {
-					matched = sw->get_matched_string();
-				}
-			}
-			delete sw;
-
-
-			// end clock for sw algorithm
-			clock_t end_time = clock();
-
-			// for calculations
-			total_elapsed_time.push_back(double(end_time - start_time) / CLOCKS_PER_SEC);
-
-			// output file
-			if (matched.length() > 0) {
-				out << matched << endl;
-			}
-
-			//increment loop
 			
+			// read lines from in1
+			stringstream ss;
+			ss.str(info2)
+			string token;
+			for (int i = 0; i < 5; i++) {
+				getline(ss, token, ':');
+			}
 
+
+			string x;
+			getline(ss, x, ':');
+			string y;
+			getline(ss, y, ':');
+
+			string key = x + ":" + y;
+			
+			string sequence1 = myMap[key]->sequence;
+			string quality1 = myMap[key]->quality;
+			
+			if(sequence1.compare(sequence2)==0) {
+				string matched = "";
+				int highest_score = 0;
+
+				// start clock for sw algorithm
+				clock_t start_time = clock();
+
+				// check one direction
+				SmithWaterman* sw = new SmithWaterman(sequence1, sequence2, quality1, quality2, match_score);
+				int curr_high_score = sw->get_highest_score();
+				if (highest_score < curr_high_score) {
+					if (sw->match_reads()) {
+						matched = sw->get_matched_string();
+					}
+				}
+				delete sw;
+
+				// check the other direction
+				sw = new SmithWaterman(sequence2, sequence1, quality2, quality1, match_score);
+				curr_high_score = sw->get_highest_score();
+				if (highest_score < curr_high_score) {
+					if (sw->match_reads()) {
+						matched = sw->get_matched_string();
+					}
+				}
+				delete sw;
+
+				// end clock for sw algorithm
+				clock_t end_time = clock();
+
+				// for calculations
+				total_elapsed_time.push_back(double(end_time - start_time) / CLOCKS_PER_SEC);
+
+				// output file
+				if (matched.length() > 0) {
+					out << matched << endl;
+				}
+				
+// 				DNAread* del = myMap[key];
+// 				delete rel;
+// 				myMap.erase(key);
+			}
+			
 		}
 		else {
 
-			//
-			string sequence1, na1, quality1;
 			string sequence2, na2, quality2;
-
-			// read lines from in1
-			getline(in1, sequence1);
-			getline(in1, na1);
-			getline(in1, quality1);
 
 			// read lines from in2
 			getline(in2, sequence2);
