@@ -9,6 +9,7 @@
 #include <ctime>
 #include "SmithWaterman.hpp"
 #include <mpi.h>
+#include <unordered_map>
 // #include <pthread.h>
 
 using namespace std;
@@ -20,12 +21,17 @@ class SmithWaterman;
 
 struct Coordinate {
 	int x, y;
-}
+};
 
 struct DNAread {
 	string sequence;
 	string quality;
-}
+	string coor;
+};
+
+
+//Hash table 
+unordered_map<string, DNAread> myMap;
 
 
 int main (int argc, char** argv) {
@@ -42,9 +48,8 @@ int main (int argc, char** argv) {
 	}
 
 	
-	//Hash table 
-	unordered_map <Coordinate, DNAread*> myMap;
-	
+
+	ifstream in1("testRead1.fastq");
 	string info1, sequence1, na1, quality1;
 	while(getline(in1, info1)) {
 
@@ -52,7 +57,7 @@ int main (int argc, char** argv) {
 		stringstream ss;
 		ss.str(info1);
 		string token;
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 2; i++) {
 			getline(ss, token, ':');
 		}
 		
@@ -62,18 +67,20 @@ int main (int argc, char** argv) {
 		string y;
 		getline(ss, y, ':');
 		
-		string key = x + ":" + y
-		
+		string key = x + ":" + y;
+
+
 		getline(in1, sequence1);
 		getline(in1, na1);
 		getline(in1, quality1);
 		
-		DNAread *tempLine = new DNAread;
+		DNAread tempLine;
 		
-		tempLine->sequence = sequence1;
-		tempLine->quality = quality1;
+		tempLine.sequence = sequence1;
+		tempLine.quality = quality1;
+		tempLine.coor = key;
 		
-		myMap[key] = tempLine;
+		myMap.insert({key,tempLine});
 	}
 
 	
@@ -81,8 +88,18 @@ int main (int argc, char** argv) {
 	int match_score = atoi(argv[1]);
 
 	ofstream out(argv[2]);	// result file
-	ifstream in1("testRead1.fastq");
+	
 	ifstream in2("testRead2.fastq");
+
+	MPI_Status status;
+	MPI_File fh;
+	MPI_offset offset;
+
+
+
+	MPI_File_open(MPI_COMM_WORLD, argv[2], MPI_MODE_CREATE|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh); 
+	nints
+
 
 	// containers
 	vector<string> matched_seq;
@@ -104,12 +121,13 @@ int main (int argc, char** argv) {
 	MPI_Comm_size(MPI_COMM_WORLD, &comm_sz); 
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
+
 	int counter = 0;
 	
 	string info2;
 	while(getline(in2, info2)) {
 		
-// 		printf("%d %d \n", counter % comm_sz, my_rank );
+		
 
 		if((counter % comm_sz) ==  my_rank) {
 
@@ -121,13 +139,13 @@ int main (int argc, char** argv) {
 			getline(in2, na2);
 			getline(in2, quality2);
 
-			cout << "Reading line " << j+1 << "..." << endl;
+			// cout << "Reading line " << j+1 << "..." << endl;
 			
 			// read lines from in1
 			stringstream ss;
-			ss.str(info2)
+			ss.str(info2);
 			string token;
-			for (int i = 0; i < 5; i++) {
+			for (int i = 0; i < 2; i++) {
 				getline(ss, token, ':');
 			}
 
@@ -138,11 +156,13 @@ int main (int argc, char** argv) {
 			getline(ss, y, ':');
 
 			string key = x + ":" + y;
+
 			
-			string sequence1 = myMap[key]->sequence;
-			string quality1 = myMap[key]->quality;
-			
-			if(sequence1.compare(sequence2)==0) {
+			string sequence1 = myMap[key].sequence;
+			string quality1 = myMap[key].quality;
+		
+
+			if(key.compare(myMap[key].coor)==0) {
 				string matched = "";
 				int highest_score = 0;
 
@@ -159,16 +179,6 @@ int main (int argc, char** argv) {
 				}
 				delete sw;
 
-				// check the other direction
-				sw = new SmithWaterman(sequence2, sequence1, quality2, quality1, match_score);
-				curr_high_score = sw->get_highest_score();
-				if (highest_score < curr_high_score) {
-					if (sw->match_reads()) {
-						matched = sw->get_matched_string();
-					}
-				}
-				delete sw;
-
 				// end clock for sw algorithm
 				clock_t end_time = clock();
 
@@ -178,12 +188,15 @@ int main (int argc, char** argv) {
 				// output file
 				if (matched.length() > 0) {
 					out << matched << endl;
+					cout << matched << endl;
+					MPI_File_write(fh, buf, 1000, MPI_INT, MPI_STATUS_IGNORE); 
 				}
 				
 // 				DNAread* del = myMap[key];
 // 				delete rel;
 // 				myMap.erase(key);
 			}
+				
 			
 		}
 		else {
@@ -195,11 +208,11 @@ int main (int argc, char** argv) {
 			getline(in2, na2);
 			getline(in2, quality2);
 		}
-
 		j++;
 		counter++;
 	}
 	
+	MPI_File_close(&fh); 
 	/*Inform MPI that this process has finished*/
 	MPI_Finalize();
 	
