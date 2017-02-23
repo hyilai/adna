@@ -57,13 +57,13 @@ public:
 
 				// deletion score
 				for (int k = i-1; k > 0; k--) {
-					int temp = grid[i-k][j] + gap(k, grid[i-k][j]);
+					int temp = grid[i-k][j] - gap(k, grid[i-k][j]);
 					if (deletion < temp) deletion = temp;
 				}
 
 				// insertion score
 				for (int l = j-1; l > 0; l--) {
-					int temp = grid[i][j-l] + gap(l, grid[i][j-l]);
+					int temp = grid[i][j-l] - gap(l, grid[i][j-l]);
 					if (insertion < temp) insertion = temp;
 				}
 
@@ -124,7 +124,7 @@ private:
 	int gap (int i, int prev_score) {
 		int n = prev_score / MATCH;
 		// original: -(GAP_PENALTY + GAP_EXTENSION * i)
-		return -(GAP_PENALTY / (n + 1) + GAP_EXTENSION) * i;
+		return (GAP_PENALTY / (n + 1) + GAP_EXTENSION) * i;
 	}
 
 	int similarity (string str1, string str2, int i, int j) {
