@@ -123,7 +123,7 @@ private:
 	
 	int gap (int i, int prev_score) {
 		int n = prev_score / MATCH;
-		// original: -(GAP_PENALTY + GAP_EXTENSION * i)
+		// original: GAP_PENALTY + GAP_EXTENSION * i
 		return (GAP_PENALTY / (n + 1) + GAP_EXTENSION) * i;
 	}
 
