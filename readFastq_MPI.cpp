@@ -17,7 +17,8 @@
 #include <iostream>
 #include <fstream>
 #include <ctime>
-// #include <mpi.h>
+#include <unordered_map>
+#include <mpi.h>
 #include "SmithWaterman.hpp"
 
 using namespace std;
@@ -41,19 +42,40 @@ vector< vector<string> > trimmed_seq;
 vector<string> adapters;
 
 
-struct Coordinate {
-	int x;
-	int y;
+// struct Coordinate {
+// 	int x;
+// 	int y;
+// };
 
-	bool operator==(const Coordinate &other) const {
-		return (x == other.x && y == other.y);
-	}
+// Coordinate find_coord (string info) {
+// 	stringstream ss;
+// 	ss.str(info);
+// 	string token;
+// 	for (int i = 0; i < 5; i++) {
+// 		getline(ss, token, ':');
+// 	}
+
+// 	Coordinate pt;
+// 	getline(ss, token, ':');
+// 	pt.x = atoi(token.c_str());
+// 	getline(ss, token, ':');
+// 	pt.y = atoi(token.c_str());
+
+// 	return pt;
+// }
+
+// bool is_same_coord (Coordinate coord1, Coordinate coord2) {
+// 	return (coord1.x == coord2.x && coord1.y == coord2.y);
+// }
+
+struct DNAread {
+	string sequence;
+	string quality;
+	string coor;
 };
 
-
-bool is_same_coord (Coordinate coord1, Coordinate coord2) {
-	return (coord1.x == coord2.x && coord1.y == coord2.y);
-}
+// Hash table
+unordered_map<string, DNAread> myMap;
 
 
 // change quality score to 2 ('#') if the leading and/or last 2 bases are 'T's
@@ -94,7 +116,7 @@ string trim_read (string sequence, string quality, string &new_quality, string &
 
 		for (int i = 0; i < adapters.size(); i++) {
 
-			SmithWaterman* sw = new SmithWaterman(sequence, adapters[i], quality, minimum_match_length);
+			SmithWaterman* sw = new SmithWaterman(sequence, adapters[i], quality, "", minimum_match_length);
 
 			int curr_high_score = sw->get_highest_score();
 
@@ -110,7 +132,7 @@ string trim_read (string sequence, string quality, string &new_quality, string &
 		}
 	} else {
 
-		SmithWaterman* sw = new SmithWaterman(sequence, TRU_SEQ_ADAPTER, quality, minimum_match_length);
+		SmithWaterman* sw = new SmithWaterman(sequence, TRU_SEQ_ADAPTER, quality, "", minimum_match_length);
 
 		int curr_high_score = sw->get_highest_score();
 
@@ -128,50 +150,111 @@ string trim_read (string sequence, string quality, string &new_quality, string &
 	return read;
 }
 
+// get key for hash table
+string get_key (string info) {
 
-void trim (string infile, string outfile, bool has_adapter_file) {
-	ifstream in(infile.c_str());
-	ofstream out(outfile.c_str());
-
-	string info, sequence, extra, quality;
-	while (getline(in, info)) {
-		getline(in, sequence);
-		getline(in, extra);
-		getline(in, quality);
-
-		// change quality for end T bases
-		strip_t(sequence, quality);
-
-		string trimmed_seq, trimmed_quality, trimmed_junk, junk_quality;
-
-		trimmed_seq = trim_read (sequence, quality, trimmed_quality, trimmed_jun, junk_quality, has_adapter_file);
-
-		if (trimmed_seq.length() >= minimum_read_length) {
-			out << info << endl
-				<< trimmed_seq << endl
-				<< extra << endl
-				<< trimmed_quality << endl;
-		}
+	// tokenize
+	stringstream ss;
+	ss.str(info);
+	string token;
+	for (int i = 0; i < 2; i++) {
+		getline(ss, token, ':');
 	}
+		
+	string x;
+	getline(ss, x, ':');
+	string y;
+	getline(ss, y, ':');
+	
+	string key = x + ":" + y;
 
-	in.close();
-	out.close();
+	return key;	
 }
 
 
-string reverse_string (string seq) {
-	stringstream ss;
-	for (int i = seq.length() - 1; i >= 0; i--) {
-		ss << seq[i];
+// trim one read file and put the data into the hash table
+void trim_file (char *infile, char *outfile, int file_num, bool has_adapter_file) {
+
+	int discarded = 0;
+
+	// diagnosic files
+	ifstream in(infile);
+	string out_filename = "trimmed_" + file_num + "_" + string(outfile);
+	ofstream out(out_filename.c_str());
+	string junk_filename = "junk_" + file_num + "_" + string(outfile);
+	ofstream junk_out(junk_filename.c_str());
+	string discarded_filename = "discarded_" + file_num + "_" + string(outfile);
+	ofstream discarded_out(discarded_filename.c_str());
+	string junk_discarded_filename = "junk_discarded_" + file_num + "_" + string(outfile);
+	ofstream junk_discarded_out(junk_discarded_filename.c_str());
+
+	string info;
+	while (getline(in, info)) {
+		string sequence, extra, quality;
+		string read, trimmed_junk, junk_quality, new_quality;
+
+		// read lines from the input file
+		// getline(in, info); // get fastq read info
+		getline(in, sequence); // get read
+		getline(in, extra); // N/A
+		getline(in, quality); // get the quality scores 
+
+
+		//strip T's for file 1
+		strip_t(sequence, quality);
+
+		// trim read 1
+		read = trim_read (sequence, quality, new_quality, trimmed_junk, junk_quality, has_adapter_file);
+
+		/* write debugging files to outputs */
+		if (read.length() >= minimum_read_length) {
+
+			// add into hash table
+			string key = get_key(info);
+			DNAread tempLine;
+			tempLine.sequence = read;
+			tempLine.quality = new_quality;
+			tempLine.coor = key;
+			myMap.insert({key, tempLine});
+
+			// write to output file
+			out << info << endl
+				<< read << endl
+				<< extra << endl
+				<< new_quality << endl;
+
+			// write to junk output file
+			junk_out << info << endl
+					 << trimmed_junk << endl
+					 << extra << endl
+					 << junk_quality << endl;
+		} else {
+			discarded++;
+			// write to output file
+			discarded_out << info << endl
+						  << read << endl
+						  << extra << endl
+						  << new_quality << endl;
+
+			// write to junk output file
+			junk_discarded_out << info << endl
+							   << trimmed_junk << endl
+							   << extra << endl
+							   << junk_quality << endl;
+		}
 	}
-	return ss.str();
+
+	out.close();
+	junk_out.close();
+	discarded_out.close();
+	junk_discarded_out.close();
 }
 
 
 string concat_reads (string sequence1, string sequence2, string quality1, string quality2, string &new_quality) {
 	string concat = "";
 	int highest_score = 0;
-	
+
 	// check one direction
 	SmithWaterman* sw = new SmithWaterman(sequence1, sequence2, quality1, quality2, minimum_match_length);
 	int curr_high_score = sw->get_highest_score();
@@ -186,29 +269,138 @@ string concat_reads (string sequence1, string sequence2, string quality1, string
 	return concat;
 }
 
-Coordinate find_coord (string info) {
+
+
+void MPI_trim_and_match (char *infile, char *outfile, bool has_adapter_file) {
+
+	ifstream in(infile);
+
+	int size, rank, counter = 0;
+
+	MPI_init(&argc, &argv);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+
+	// output filename
 	stringstream ss;
-	ss.str(info);
-	string token;
-	for (int i = 0; i < 5; i++) {
-		getline(ss, token, ':');
+	ss << outfile << "_" << rank << ".fastq" << endl;
+	string out_filename(ss.str());
+	ofstream out(out_filename.c_str());
+
+	string info;
+	while (getline(in, info)) {
+		
+		string sequence, na, quality;
+		string read, new_quality, trimmed_junk, junk_quality;
+		
+		// read lines from in1
+		getline(in, sequence);
+		getline(in, na);
+		getline(in, quality);
+
+		// process only if line is assigned
+		if (counter % size == rank) {
+
+			//get key for hash table
+			string key = get_key(info);
+
+			//strip T's for file 1
+			strip_t(sequence, quality);
+
+			// trim read 1
+			read = trim_read (sequence, quality, new_quality, trimmed_junk, junk_quality, has_adapter_file);
+
+			if (read.length() >= minimum_read_length) {
+				// check if key exists
+				unordered_map<string, DNAread>::const_iterator found = myMap.find(key);
+
+				//if no such key found
+				if (found == myMap.end()) {
+
+					// check quality
+					if (quality_check(new_quality)) {
+						out << "read2:" << key << endl
+							<< read << endl
+							<< na << endl
+							<< new_quality << endl;
+					}
+
+				} else {
+					// concatenate
+					string concat_read, concat_quality;
+					string read1 = myMap[key].sequence;
+					string quality1 = myMap[key].quality;
+
+
+					// match hash table key
+					concat_read = concat_reads(read1, read, quality1, new_quality, concat_quality);
+					
+					if (concat_read.length() > 0) {
+
+						// check quality
+						if (quality_check(concat_quality)) {
+							out << "concatenated:" << key << endl
+								<< concat_read << endl
+								<< na << endl
+								<< concat_quality << endl;
+						}
+
+					} else {
+
+						// check quality1
+						if (quality_check(quality1)) {
+							out << "read1:" << key << endl
+								<< read1 << endl
+								<< na << endl
+								<< quality1 << endl;
+						}
+
+						// check quality2
+						if (quality_check(new_quality)) {
+							out << "read2:" << key << endl
+								<< read << endl
+								<< na << endl
+								<< new_quality << endl;
+						}
+
+					}
+				}
+			}
+
+		} else {
+			counter++;
+		}
 	}
+	out.close();
 
-	Coordinate pt;
-	getline(ss, token, ':');
-	pt.x = atoi(token.c_str());
-	getline(ss, token, ':');
-	pt.y = atoi(token.c_str());
+	// concatenate files together
+	if (rank == 0) concat_files(outfile, size);
 
-	return pt;
+	MPI_Finalize();
+}
+
+void concat_files (char *outfile, int size) {
+	stringstream ss;
+	ss << outfile << ".fastq";
+	string f = ss.str();
+	ofstream out(f.c_str());
+	for (int i = 0; i < size; i++) {
+		stringstream t;
+		t << outfile << "_" << i << ".fastq";
+		string temp = t.str();
+		ifstream in(temp.c_str());
+		out << in.rdbuf();
+		in.close();
+	}
+	out.close();
 }
 
 
-
-// void parse_file (int start, int end) {
+// single threaded read processing function
 void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapter_file) {
 
-	int discarded1 = 0, discarded2 = 0, num_concat = 0, num_final = 0, num_qc1 = 0, num_qc2 = 0;
+	int discarded1 = 0, discarded2 = 0, num_concat = 0, num_final = 0;
 
 	// files for infile1
 	ifstream in1(infile1);
@@ -220,8 +412,6 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 	ofstream discarded_out1(discarded_filename1.c_str());
 	string junk_discarded_filename1 = "junk_discarded_1_" + string(outfile);
 	ofstream junk_discarded_out1(junk_discarded_filename1.c_str());
-	string qc_filename1 = "qc_1_" + string(outfile);
-	ofstream qc_out1(qc_filename1.c_str());
 
 
 	// files for infile2
@@ -234,8 +424,6 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 	ofstream discarded_out2(discarded_filename2.c_str());
 	string junk_discarded_filename2 = "junk_discarded_2_" + string(outfile);
 	ofstream junk_discarded_out2(junk_discarded_filename2.c_str());
-	string qc_filename2 = "qc_2_" + string(outfile);
-	ofstream qc_out2(qc_filename2.c_str());
 
 
 	// file for concatenated reads
@@ -393,19 +581,6 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 						  << extra1 << endl
 						  << new_quality << endl;
 			}
-		} else {
-			bool q1_pass_quality = quality_check(quality1);
-			bool q2_pass_quality = quality_check(quality2);
-
-			if (q1_pass_quality) {
-				num_qc1++;
-
-			}
-
-			if (q2_pass_quality) {
-				num_qc2++;
-
-			}
 		}
 
 	}
@@ -447,7 +622,6 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 	junk_out1.close();
 	discarded_out1.close();
 	junk_discarded_out1.close();
-	qc_out1.close();
 
 
 	in2.close();
@@ -455,8 +629,6 @@ void process_reads (char* infile1, char* infile2, char* outfile, bool has_adapte
 	junk_out2.close();
 	discarded_out2.close();
 	junk_discarded_out2.close();
-	qc_out2.close();
-
 
 	concat_out.close();
 	final_out.close();
@@ -518,24 +690,6 @@ int main (int argc, char** argv) {
 		}
 	}
 
-	process_reads(argv[1], argv[2], argv[3], using_adapter_file);
-
-
-	// set up MPI stuff
-	// int comm_sz;
-	// int my_rank;
-
-	// MPI_Init(NULL,NULL);
-	// MPI_comm_size(MPI_COMM_WORLD, &comm_sz);
-	// MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-	// if (my_rank != 0) {
-	// 	//MPI_Send();
-	// } else {
-	// 	//MPI_Recv();
-	// }
-
-	// MPI_Finalize();
 
 	return 0;
 }
