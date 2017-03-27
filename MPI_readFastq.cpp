@@ -69,7 +69,7 @@ const int CONCAT_END_TAG = 20;
 
 
 
-
+//These are for getting the memory usage
 struct sysinfo memInfo;
 static unsigned long long lastTotalUser, lastTotalUserLow, lastTotalSys, lastTotalIdle;
 static clock_t lastCPU, lastSysCPU, lastUserCPU;
@@ -1169,7 +1169,7 @@ void print_argument_directions(char* program) {
 	cerr << "          --MPI (flag for using MPI)" << endl;
 }
 
-
+//Parse Line to get the information for RAM usage
 int parseLine(char* line){
     // This assumes that a digit will be found and the line ends in " Kb".
     int i = strlen(line);
@@ -1180,6 +1180,7 @@ int parseLine(char* line){
     return i;
 }
 
+//Get the RAM usage for the the process currently being used
 int getValue(){ //Note: this value is in KB!
     FILE* file = fopen("/proc/self/status", "r");
     int result = -1;
@@ -1194,8 +1195,8 @@ int getValue(){ //Note: this value is in KB!
     fclose(file);
     return result;
 }
-
-
+ 
+//Initialize CPU currently used
 void initCPUCurrent(){
     FILE* file = fopen("/proc/stat", "r");
     fscanf(file, "cpu %llu %llu %llu %llu", &lastTotalUser, &lastTotalUserLow,
@@ -1203,6 +1204,7 @@ void initCPUCurrent(){
     fclose(file);
 }
 
+//CPU currently used
 double CPUCurrent(){
     double percent;
     FILE* file;
@@ -1237,7 +1239,7 @@ double CPUCurrent(){
     return percent;
 }
 
-
+//Initialize CPU currently used by current process
 void initCPUCurrentProcess(){
     FILE* file;
     struct tms timeSample;
@@ -1255,6 +1257,7 @@ void initCPUCurrentProcess(){
     fclose(file);
 }
 
+//CPU currently used by current process
 double	CPUCurrentProcess(){
     struct tms timeSample;
     clock_t now;
@@ -1282,6 +1285,7 @@ double	CPUCurrentProcess(){
     return percent;
 }
 
+//Gets the information for RAM and CPU usage
 void GetMemoryUsage() {
 	sysinfo (&memInfo);
 	long long totalVirtualMem = memInfo.totalram;
@@ -1296,9 +1300,10 @@ void GetMemoryUsage() {
 	physMemUsed *= memInfo.mem_unit;
 
 	cout << "Total physical memory: " << totalPhysMem << endl;
-	cout << "Physical memory currently used" << physMemUsed << endl;
-	cout << "CPU currently csed" << initCPUCurrent(); << endl;
-	cout << "CPU currently used by current process:" << initCPUCurrentProcess(); << endl;	
+	cout << "Physical memory currently used " << physMemUsed << endl;
+	cout << "Physical memory currently being used by current process: " << getValue() << endl;
+	cout << "CPU currently used: " << CPUCurrent() << endl;
+	cout << "CPU currently used by current process: " << CPUCurrentProcess() << endl;	
 }
 
 
@@ -1309,6 +1314,7 @@ int main (int argc, char** argv) {
 		exit(1); 
 	}
 
+	//Initialize data and files to track RAM and CPU usage
 	initCPUCurrent();
 	initCPUCurrentProcess();
 
