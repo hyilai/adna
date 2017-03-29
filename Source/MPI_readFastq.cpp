@@ -27,9 +27,9 @@
 #include "global.hpp"
 #include "hash_table.hpp"
 #include "MPI_readFastq.hpp"
-#include "ZipLib/ZipFile.h"
-#include "ZipLib/streams/memstream.h"
-#include "ZipLib/methods/Bzip2Method.h"
+// #include "ZipLib/ZipFile.h"
+// #include "ZipLib/streams/memstream.h"
+// #include "ZipLib/methods/Bzip2Method.h"
 
 
 using namespace std;
