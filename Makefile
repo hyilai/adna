@@ -40,7 +40,7 @@ OBJS = \
 all: $(EXECUTABLE) $(SO_LIBRARY)
 
 $(EXECUTABLE): $(OBJS)
-	$(SPMPICXX) $(MPIFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/hash_table.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq2.cpp Source/main.cpp -o $@ $^
+	$(SPMPICXX) $(MPIFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/hash_table.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq.cpp Source/main.cpp -o $@ $^
 
 $(SO_LIBRARY): $(OBJS)
 	$(CXX) $(LDFLAGS) -shared -o $@ $^
