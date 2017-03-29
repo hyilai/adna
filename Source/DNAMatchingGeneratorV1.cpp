@@ -50,26 +50,12 @@ string make_extra_DNA(int range) {
 
 }
 
-
-int main(int argc, char** argv) {
-
-	if(argc != 3) {
-		cout << "Error: Must provide arguments <length of DNA> <length of fragments>" << endl;
-		return 0;
-	}
-
-	int Length_DNA = atoi(argv[1]); //This gets the length of the DNA from the command argument
-	int DNA_split = atoi(argv[2]); //This is how many times we will split the DNA 
+string make_DNA (int range) {
 	string DNA;
 
-	//This is for the random number generator
-	srand(time(NULL));
-
-
-	//This randomly generates the DNA
 	int i;
 	stringstream ss;
-	for(i=0;i<Length_DNA;i++) {
+	for(i=0;i<range;i++) {
 		ss << get_random_base();
 	}
 
@@ -78,28 +64,62 @@ int main(int argc, char** argv) {
 	ss.str("");
 	ss.clear();
 
+	return DNA;
+
+}
+
+
+int main(int argc, char** argv) {
+
+	if(argc != 3) {
+		cout << "Error: Must provide arguments <number of fragments> <length of fragment>" << endl;
+		return 0;
+	}
+
+	int fragments = atoi(argv[1]); //This gets the length of the DNA from the command argument
+	int DNA_split = atoi(argv[2]); //This is how many times we will split the DNA 
+	// string DNA;
+
+	//This is for the random number generator
+	srand(time(NULL));
+
+
+	//This randomly generates the DNA
+	// int i;
+	// stringstream ss;
+	// for(i=0;i<Length_DNA;i++) {
+	// 	ss << get_random_base();
+	// }
+
+	// ss >> DNA;
+
+	// ss.str("");
+	// ss.clear();
+
 	ofstream outFile1("testRead1.fastq");
 	ofstream outFile2("testRead2.fastq");
 
-	int prev_Location1 = 5;
-	int prev_Location2 = 5;
-	int counter = 0;
-	i = 0;
+	int i = 0;
 	// outFile << DNA << endl;
 
 	//Split DNA and put adapters in between
-	while(counter < Length_DNA) {
-		i++;
-		int temp = rand() % (5);
-		temp = temp + prev_Location1;
-		counter = temp + DNA_split;
-		if(counter > Length_DNA) {
-			break;
+	while(i++ < fragments) {
+		int overlap = rand() % (DNA_split/2);
+		overlap = (overlap >= 7) ? overlap : 7;
+		int temp1 = rand() % (DNA_split - overlap) + 1;
+		int temp2 = DNA_split - temp1 - overlap;
+		while (temp2 == 0) {
+			temp1 = rand() % (DNA_split - overlap) + 1;
+			temp2 = DNA_split - temp1 - overlap;
 		}
 
-		int start1 = temp;
-		string read1 = DNA.substr(start1,DNA_split);
-		prev_Location1 = start1+DNA_split+5;
+		int actual_length = temp1 + temp2 + overlap;
+
+		string DNA = make_DNA(actual_length);
+
+		string read1 = DNA.substr(0, temp1 + overlap);
+
+		string read2 = DNA.substr(temp1, temp2 + overlap);
 
 
 		outFile1 << i << endl;
@@ -110,18 +130,6 @@ int main(int argc, char** argv) {
 			outFile1 << "+";
 		} 
 		outFile1 << endl;
-
-		
-		temp = rand() % (5);
-		temp = temp + DNA_split/2 + prev_Location2;
-		counter = temp +  + DNA_split;
-		if(counter > Length_DNA) {
-			break;
-		}
-
-		int start2 = temp+1;
-		string read2 = DNA.substr(start2,DNA_split);
-		prev_Location2 = start2+DNA_split+5;
 
 		outFile2 << i << endl;
 		outFile2 << read2 << endl;

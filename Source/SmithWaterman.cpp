@@ -328,6 +328,8 @@ bool SmithWaterman::match_reads () {
 	int curr_score = highest;
 	int i = highest_i;
 	int j = highest_j;
+	int prev_i = i;
+	int prev_j = j;
 	while (curr_score != 0 && i > 0 && j > 0) {
 		int current = grid[i][j];
 		int left = grid[i][j-1];
@@ -357,13 +359,15 @@ bool SmithWaterman::match_reads () {
 		}
 
 		curr_score = next_highest;
+		prev_i = i;
+		prev_j = j;
 		i = next_i;
 		j = next_j;
 	}
 
 
 	// if the length of the matching subsequence is less than the minimum match length do nothing
-	if (highest_j - j < match_length || highest_i - i < match_length) {
+	if (highest_j - (prev_j - 1) < match_length || highest_i - (prev_i - 1) < match_length) {
 		return false;
 	} else {	// else concatenate the two strings togther
 		// concatenate matching strings

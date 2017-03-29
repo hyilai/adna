@@ -5,7 +5,6 @@
 #include <vector>
 #include "global.hpp"
 #include "steps.hpp"
-// #include "adapters.hpp"
 
 using namespace std;
 

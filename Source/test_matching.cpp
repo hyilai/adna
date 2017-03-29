@@ -29,8 +29,8 @@ int main (int argc, char** argv) {
 	int match_score = atoi(argv[1]);
 
 	ofstream out(argv[2]);	// result file
-	ifstream in1("Source/testRead1.fastq");
-	ifstream in2("Source/testRead2.fastq");
+	ifstream in1("testRead1.fastq");
+	ifstream in2("testRead2.fastq");
 
 	// containers
 	vector<string> matched_seq;
@@ -41,6 +41,8 @@ int main (int argc, char** argv) {
 
 	// clock start
 	clock_t start = clock();
+
+	int num_matched = 0;
 
 	string info1, sequence1, na1, quality1;
 	string info2, sequence2, na2, quality2;
@@ -56,7 +58,7 @@ int main (int argc, char** argv) {
 		getline(in2, na2);
 		getline(in2, quality2);
 
-		cout << "Reading line " << j+1 << "..." << endl;
+		// cout << "Reading line " << j+1 << "..." << endl;
 
 		string matched = "";
 		int highest_score = 0;
@@ -83,12 +85,18 @@ int main (int argc, char** argv) {
 
 		// output file
 		if (matched.length() > 0) {
-			out << matched << endl;
+			num_matched++;
 		}
 
+		
+		out << matched << endl;
+		
 		//increment loop
 		j++;
 	}
+
+	cout << "Total reads: " << j << endl;
+	cout << "Number matched: " << num_matched << endl;
 
 	// clock ends
 	clock_t end = clock();
