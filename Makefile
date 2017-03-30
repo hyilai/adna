@@ -25,7 +25,7 @@ $HASHH 	  = Source/hash_table.hpp
 all: $(EXECUTABLE) $(SO_LIBRARY)
 
 $(EXECUTABLE):
-	$(MPICXX) $(MPIFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/hash_table.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq.cpp Source/main.cpp -o $@ $^
+	$(MPICXX) $(MPIFLAG) $(BOOSTFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/hash_table.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq.cpp Source/main.cpp -o $@ $^
 
 
 clean:
