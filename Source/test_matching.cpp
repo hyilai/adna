@@ -88,7 +88,6 @@ int main (int argc, char** argv) {
 			num_matched++;
 		}
 
-		
 		out << matched << endl;
 		
 		//increment loop

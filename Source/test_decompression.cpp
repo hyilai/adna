@@ -13,7 +13,7 @@ int main () {
 	// decompression
 	// igzstream in("archive.gz");
 	// open and read from gzipped file
-	ifstream file("archive.gz", ios_base::in | ios_base::binary);
+	ifstream file("/local_storage/capstone/15-006-001_ATCACG_L004_R1_001.fastq.gz", ios_base::in | ios_base::binary);
 	boost::iostreams::filtering_istream in;
 	in.push(boost::iostreams::gzip_decompressor());
 	in.push(file);
