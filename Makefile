@@ -1,5 +1,6 @@
 # Final names of binaries
 EXECUTABLE = Bin/adna
+RUNTIME	   = Bin/test_runtime
 
 # C & C++ compiler
 #CC       = gcc
@@ -27,6 +28,8 @@ all: $(EXECUTABLE)
 $(EXECUTABLE):
 	$(MPICXX) $(MPIFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/hash_table.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq.cpp Source/main.cpp -o $@ $^
 
+$(RUNTIME):
+	$(MPICXX) $(MPIFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/hash_table.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq2.cpp Source/main2.cpp -o $@ $^
 
 clean:
 

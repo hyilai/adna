@@ -6,6 +6,7 @@
  ****	with the trimmed reads along with their quality
  ****	control strings.
  ****
+ ****	This version is for runtime testing
  ************************************************************/
 
 
@@ -29,7 +30,7 @@
 #include "utilities.hpp"
 #include "global.hpp"
 #include "hash_table.hpp"
-#include "MPI_readFastq.hpp"
+#include "MPI_readFastq2.hpp"
 
 using namespace std;
 
@@ -53,6 +54,8 @@ const int NUM_FINAL_TAG = 16;
 
 // Hash table
 hash_table *myMap;
+
+int NUM_LINES;
 
 // receive char* from MPI and convert it into string
 string MPI_receive_string (int source, int tag) {
@@ -105,10 +108,12 @@ void trim_file (char* infile, char* outfile, int file_num, vector<string> adapte
 
 	int j = 0;
 	string info;
-	while (getline(in, info)) {
+	for(int i = 0; i < NUM_LINES; i++) {
+	// while (getline(in, info)) {
+		getline(in, info);
 
 		if (j++ % LINEBLOCKS == 0) {
-			cout << "\tParsing read " << j << "..." << endl;
+			// cout << "\tParsing read " << j << "..." << endl;
 		}
 
 		string sequence, extra, quality;
@@ -216,7 +221,7 @@ void MPI_trim_file (char *infile, char *outfile, int file_num, int rank, int siz
 			} else {
 
 				if (j++ % LINEBLOCKS == 0) {
-					cout << "\tParsing read " << j << "..." << endl;
+					// cout << "\tParsing read " << j << "..." << endl;
 				}
 
 				num_reads++;
@@ -297,8 +302,11 @@ void MPI_trim_file (char *infile, char *outfile, int file_num, int rank, int siz
 		const int dest = 0;		// always send messages to the master
 		int is_continuing = 1;	// signal for the master that this worker is continuing
 
+		for (int i = 0; i < NUM_LINES; i++) {
 		string info;
-		while (getline(in, info)) {
+		// while (getline(in, info)) {
+		getline(in, info);
+
 			string sequence, extra, quality;
 			string read, trimmed_junk, junk_quality, new_quality;
 
@@ -415,7 +423,7 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 			} else {
 
 				if (j++ % LINEBLOCKS == 0) {
-					cout << "\tParsing read " << j << "..." << endl;
+					// cout << "\tParsing read " << j << "..." << endl;
 				}
 
 				int discarding;
@@ -537,7 +545,7 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 			final_out.close();
 		}
 
-		cout << "Merging output files..." << endl;
+		// cout << "Merging output files..." << endl;
 		merge_files(temp, size);
 
 	} else {
@@ -556,8 +564,10 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 		// in.push(file);
 
 
+		for (int i = 0; i < NUM_LINES; i++) {
 		string info;
-		while (getline(in, info)) {
+		// while (getline(in, info)) {
+		getline(in, info);
 			
 			string sequence, extra, quality;
 			string read, new_quality, trimmed_junk, junk_quality;
@@ -679,7 +689,9 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 
 
 // single threaded read processing function
-void process_reads (char* infile1, char* infile2, char* outfile, int file_num, vector<string> adapters, bool debug) {
+double process_reads (char* infile1, char* infile2, char* outfile, int file_num, vector<string> adapters, int lines, bool debug) {
+
+	NUM_LINES = lines;
 
 	int discarded1 = 0, discarded2 = 0, num_concat = 0, num_final = 0;
 
@@ -689,7 +701,7 @@ void process_reads (char* infile1, char* infile2, char* outfile, int file_num, v
 	//start clock
 	clock_t start_time = clock();
 
-	cout << "Reading file1..." << endl;
+	// cout << "Reading file1..." << endl;
 
 	// get hash table for read file1
 	int num_reads1;
@@ -705,8 +717,7 @@ void process_reads (char* infile1, char* infile2, char* outfile, int file_num, v
 	string junk_discarded_filename = get_file_name(string("junk_discarded"), file_num, string(outfile));
 	ofstream junk_discarded_out2(junk_discarded_filename);
 
-
-	cout << "Reading file2..." << endl;
+	// cout << "Reading file2..." << endl;
 
 	// file for concatenated reads
 	string final_out_filename = string("final_") + string(outfile);
@@ -719,13 +730,14 @@ void process_reads (char* infile1, char* infile2, char* outfile, int file_num, v
 	// in2.push(boost::iostreams::gzip_decompressor());
 	// in2.push(file2);
 
-
 	int j = 0;
 	string info2;
-	while (getline(in2, info2)) {
+	for (int i = 0; i < NUM_LINES; i++) {
+	// while (getline(in2, info2)) {
+		getline(in2, info2);
 
 		if (j++ % LINEBLOCKS == 0) {
-			cout << "\tParsing read " << j << "..." << endl;
+			// cout << "\tParsing read " << j << "..." << endl;
 		}
 		
 		string sequence2, extra2, quality2;
@@ -847,7 +859,7 @@ void process_reads (char* infile1, char* infile2, char* outfile, int file_num, v
 	// find elapsed time
 	double elapsed_time = (end_time - start_time) / (double) CLOCKS_PER_SEC;
 
-	print_diagnostics(elapsed_time, num_reads1, j, discarded1, discarded2, num_concat, num_final);
+	// print_diagnostics(elapsed_time, num_reads1, j, discarded1, discarded2, num_concat, num_final);
 
 	// file2.close();
 	in2.close();
@@ -870,10 +882,14 @@ void process_reads (char* infile1, char* infile2, char* outfile, int file_num, v
 
 	// delete hash table
 	delete myMap;
+
+	return elapsed_time;
 }
 
 
-void MPI_process_reads (char* infile1, char* infile2, char* outfile, int rank, int size, vector<string> adapters, bool debug) {
+double MPI_process_reads (char* infile1, char* infile2, char* outfile, int rank, int size, vector<string> adapters, int lines, bool debug) {
+
+	NUM_LINES = lines;
 
 	int discarded1, discarded2, num_reads1, num_reads2, num_concat, num_final;
 
@@ -885,7 +901,7 @@ void MPI_process_reads (char* infile1, char* infile2, char* outfile, int rank, i
 	double start_time = MPI_Wtime();
 
 	if (rank == 0) {
-		cout << "Reading file1..." << endl;
+		// cout << "Reading file1..." << endl;
 	}
 
 	// trim read 1
@@ -895,7 +911,7 @@ void MPI_process_reads (char* infile1, char* infile2, char* outfile, int rank, i
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	if (rank == 0) {
-		cout << "Reading file2..." << endl;
+		// cout << "Reading file2..." << endl;
 	}
 
 	// trim read 2 and merge read 1 and 2 together
@@ -913,7 +929,9 @@ void MPI_process_reads (char* infile1, char* infile2, char* outfile, int rank, i
 
 
 	if (rank == 0) {
-		print_diagnostics(end_time - start_time, num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final);
+		// print_diagnostics(end_time - start_time, num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final);
 	}
+
+	return end_time - start_time;
 }
 

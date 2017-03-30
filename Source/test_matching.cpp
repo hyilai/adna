@@ -21,14 +21,14 @@ int main (int argc, char** argv) {
 
 	srand(time(NULL));
 
-	if (argc != 3) {
-		cerr << "Arguments: <minimum matching score> <output file>" << endl;
+	if (argc != 4) {
+		cerr << "Arguments: <result length> <minimum matching score> <output file>" << endl;
 		exit(1); 
 	}
+	int length = atoi(argv[1]);
+	int match_score = atoi(argv[2]);
 
-	int match_score = atoi(argv[1]);
-
-	ofstream out(argv[2]);	// result file
+	ofstream out(argv[3]);	// result file
 	ifstream in1("testRead1.fastq");
 	ifstream in2("testRead2.fastq");
 
@@ -43,6 +43,8 @@ int main (int argc, char** argv) {
 	clock_t start = clock();
 
 	int num_matched = 0;
+	int total_derv = 0;
+	int num_perfect = 0;
 
 	string info1, sequence1, na1, quality1;
 	string info2, sequence2, na2, quality2;
@@ -87,6 +89,11 @@ int main (int argc, char** argv) {
 		if (matched.length() > 0) {
 			num_matched++;
 		}
+		total_derv += (abs((int)matched.length() - length));
+
+		if (matched.length() == length) {
+			num_perfect++;
+		}
 
 		out << matched << endl;
 		
@@ -96,6 +103,9 @@ int main (int argc, char** argv) {
 
 	cout << "Total reads: " << j << endl;
 	cout << "Number matched: " << num_matched << endl;
+	cout << "Number of perfectly merged reads: " << num_perfect << endl;
+	cout << "Average deviation from actual length for all reads: " << (double)total_derv/(double)j << endl;
+	cout << "Average deviation from actual length for non-perfectly merged reads: " << (double)total_derv/(double)(j - num_perfect) << endl;
 
 	// clock ends
 	clock_t end = clock();
