@@ -22,10 +22,10 @@ $HASHH 	  = Source/hash_table.hpp
 
 
 # Rules
-all: $(EXECUTABLE) $(SO_LIBRARY)
+all: $(EXECUTABLE)
 
 $(EXECUTABLE):
-	$(MPICXX) $(MPIFLAG) $(BOOSTFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/hash_table.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq.cpp Source/main.cpp -o $@ $^
+	$(MPICXX) $(MPIFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/hash_table.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq.cpp Source/main.cpp -o $@ $^
 
 
 clean:
