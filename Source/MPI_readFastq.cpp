@@ -21,19 +21,17 @@
 #include <ctime>
 #include <unordered_map>
 #include <mpi.h>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 #include "memory_usage.hpp"
 #include "steps.hpp"
 #include "utilities.hpp"
 #include "global.hpp"
 #include "hash_table.hpp"
 #include "MPI_readFastq.hpp"
-// #include "ZipLib/ZipFile.h"
-// #include "ZipLib/streams/memstream.h"
-// #include "ZipLib/methods/Bzip2Method.h"
-
 
 using namespace std;
-
 
 // tags for MPI messages
 // const int DATA_TAG = 0;
@@ -80,16 +78,18 @@ string MPI_receive_string (int source, int tag) {
 }
 
 
+// single-threaded
 // trim one read file and put the data into the hash table; single-threaded
-void trim_file (char *infile, char *outfile, int file_num, vector<string> adapters, int &num_reads, int &discarded, bool debug) {
+void trim_file (char* infile, char* outfile, int file_num, vector<string> adapters, int &num_reads, int &discarded, bool debug) {
 
 	discarded = 0;
 
-	ifstream in(infile);
-	// decompression
-	// ZipArchive::Ptr archive = ZipFile::Open(string(infile));
-	// ZipArchiveEntry::Ptr entry = archive->GetEntry(0);
-	// istream* in = entry->GetDecompressionStream();
+	// open and read from gzipped file
+	ifstream file(infile, ios_base::in | ios_base::binary);
+	boost::iostreams::filtering_istream in;
+	in.push(boost::iostreams::gzip_decompressor());
+	in.push(file);
+
 
 	// diagnosic files
 	string out_filename = get_file_name(string("trimmed"), file_num, string(outfile));
@@ -131,11 +131,6 @@ void trim_file (char *infile, char *outfile, int file_num, vector<string> adapte
 
 			// add into hash table
 			string key = myMap->get_key(info);
-			// DNAread tempLine;
-			// tempLine.sequence = read;
-			// tempLine.quality = new_quality;
-			// tempLine.info = info;
-			// myMap->insert({key, tempLine});
 			myMap->add(key, info, read, new_quality);
 
 			// write to output file
@@ -158,7 +153,7 @@ void trim_file (char *infile, char *outfile, int file_num, vector<string> adapte
 
 	num_reads = j;
 
-	in.close();
+	file.close();
 
 	out.close();
 	junk_out.close();
@@ -246,11 +241,6 @@ void MPI_trim_file (char *infile, char *outfile, int file_num, int rank, int siz
 
 					// add into hash table
 					string key = myMap->get_key(info);
-					// DNAread tempLine;
-					// tempLine.sequence = read;
-					// tempLine.quality = new_quality;
-					// tempLine.info = info;
-					// myMap->insert({key, tempLine});
 					myMap->add(key, info, read, new_quality);
 
 					// write to output file
@@ -294,11 +284,13 @@ void MPI_trim_file (char *infile, char *outfile, int file_num, int rank, int siz
 
 	} else {
 
-		ifstream in(infile);
-		// decompression
-		// ZipArchive::Ptr archive = ZipFile::Open(string(infile));
-		// ZipArchiveEntry::Ptr entry = archive->GetEntry(0);
-		// istream* in = entry->GetDecompressionStream();
+		// ifstream in(infile);
+		// open and read from gzipped file
+		ifstream file(infile, ios_base::in | ios_base::binary);
+		boost::iostreams::filtering_istream in;
+		in.push(boost::iostreams::gzip_decompressor());
+		in.push(file);
+
 
 		const int dest = 0;		// always send messages to the master
 		int is_continuing = 1;	// signal for the master that this worker is continuing
@@ -345,7 +337,7 @@ void MPI_trim_file (char *infile, char *outfile, int file_num, int rank, int siz
 			}
 		}
 
-		in.close();
+		file.close();
 
 		// MPI_Barrier(MPI_COMM_WORLD);
 
@@ -448,7 +440,6 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 					/* move onto the next step (concatenation) */
 					// find key
 					string key = get_key(info);
-					// unordered_map<string, DNAread>::const_iterator found = myMap->find(key);
 					bool found = myMap->has_key(key);
 
 
@@ -554,11 +545,13 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 		ofstream final_out(final_out_filename.c_str());
 
 		// go through input file2
-		ifstream in(infile);
-		// decompression
-		// ZipArchive::Ptr archive = ZipFile::Open(string(infile));
-		// ZipArchiveEntry::Ptr entry = archive->GetEntry(0);
-		// istream* in = entry->GetDecompressionStream();
+		// ifstream in(infile);
+		// open and read from gzipped file
+		ifstream file(infile, ios_base::in | ios_base::binary);
+		boost::iostreams::filtering_istream in;
+		in.push(boost::iostreams::gzip_decompressor());
+		in.push(file);
+
 
 
 		string info;
@@ -669,7 +662,7 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 			// counter++;
 		}
 
-		in.close();
+		file.close();
 		final_out.close();
 
 		// signal to master that the worker has finished
@@ -715,11 +708,13 @@ void process_reads (char* infile1, char* infile2, char* outfile, int file_num, v
 	string final_out_filename = string("final_") + string(outfile);
 	ofstream final_out(final_out_filename.c_str());
 
-	ifstream in2(infile2);
-	// decompression
-	// ZipArchive::Ptr archive = ZipFile::Open(string(infile2));
-	// ZipArchiveEntry::Ptr entry = archive->GetEntry(0);
-	// istream* in2 = entry->GetDecompressionStream();
+	// ifstream in2(infile2);
+	// open and read from gzipped file
+	ifstream file2(infile2, ios_base::in | ios_base::binary);
+	boost::iostreams::filtering_istream in2;
+	in2.push(boost::iostreams::gzip_decompressor());
+	in2.push(file2);
+
 
 	int j = 0;
 	string info2;
@@ -850,7 +845,7 @@ void process_reads (char* infile1, char* infile2, char* outfile, int file_num, v
 
 	print_diagnostics(elapsed_time, num_reads1, j, discarded1, discarded2, num_concat, num_final);
 
-	in2.close();
+	file2.close();
 	out2.close();
 	junk_out2.close();
 	discarded_out2.close();
