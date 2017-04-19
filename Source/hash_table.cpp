@@ -11,8 +11,7 @@ using namespace std;
 
 // constructor
 hash_table::hash_table() {
-	unordered_map<std::string, DNAread> temp;
-	myMap = temp;
+
 }
 
 
@@ -23,16 +22,19 @@ string hash_table::get_key (string info) {
 	stringstream ss;
 	ss.str(info);
 	string token;
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 4; i++) {
 		getline(ss, token, ':');
 	}
 		
+	string flowcell;
+	getline(ss, flowcell, ':');
 	string x;
 	getline(ss, x, ':');
 	string y;
 	getline(ss, y, ' ');
+
 	
-	string key = x + ":" + y;
+	string key = flowcell + ":" + x + ":" + y;
 
 	return key;	
 }
@@ -46,10 +48,9 @@ bool hash_table::has_key (string key) {
 	}
 }
 
-bool hash_table::add (string key, string info, string seq, string qual) {
+bool hash_table::add (string key, string seq, string qual) {
 	if (!has_key(key)) {
 		DNAread temp;
-		temp.info = info;
 		temp.sequence = seq;
 		temp.quality = qual;
 		myMap.insert({key, temp});
@@ -59,10 +60,12 @@ bool hash_table::add (string key, string info, string seq, string qual) {
 	}
 }
 
-
-string hash_table::get_info (string key) {
-	return myMap[key].info;
+string hash_table::get_info (string first, string second, string key, int num) {
+	stringstream ss;
+	ss << first << ":" << key << " " << num << ":" << second;
+	return ss.str();
 }
+
 
 string hash_table::get_seq (string key) {
 	return myMap[key].sequence;

@@ -6,7 +6,6 @@
  ****	with the trimmed reads along with their quality
  ****	control strings.
  ****
- ****	This version is for runtime testing
  ************************************************************/
 
 
@@ -30,7 +29,7 @@
 #include "utilities.hpp"
 #include "global.hpp"
 #include "hash_table.hpp"
-#include "MPI_readFastq2.hpp"
+#include "MPI_readFastq.hpp"
 
 using namespace std;
 
@@ -55,8 +54,12 @@ const int NUM_FINAL_TAG = 16;
 // Hash table
 hash_table *myMap;
 
-int NUM_LINES;
+// info for the reads;
+DNAinfo read_info;
+
+// numbers for diagnostics
 int num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final;
+
 
 // receive char* from MPI and convert it into string
 string MPI_receive_string (int source, int tag) {
@@ -84,9 +87,7 @@ string MPI_receive_string (int source, int tag) {
 
 // single-threaded
 // trim one read file and put the data into the hash table; single-threaded
-void trim_file (char* infile, char* outfile, int file_num, vector<string> adapters, bool debug) {
-
-	discarded1 = 0;
+void trim_file (char* infile, char* outfile, vector<string> adapters, bool debug) {
 
 	ifstream in(infile);
 	// open and read from gzipped file
@@ -97,33 +98,32 @@ void trim_file (char* infile, char* outfile, int file_num, vector<string> adapte
 
 
 	// diagnosic files
-	string out_filename = get_file_name(string("trimmed"), file_num, string(outfile));
+	string out_filename = get_file_name(string("trimmed"), 1, string(outfile));
 	ofstream out(out_filename);
-	string junk_filename = get_file_name(string("junk"), file_num, string(outfile));
+	string junk_filename = get_file_name(string("junk"), 1, string(outfile));
 	ofstream junk_out(junk_filename);
-	string discarded_filename = get_file_name(string("discarded"), file_num, string(outfile));
+	string discarded_filename = get_file_name(string("discarded"), 1, string(outfile));
 	ofstream discarded_out(discarded_filename);
-	string junk_discarded_filename = get_file_name(string("junk_discarded"), file_num, string(outfile));
+	string junk_discarded_filename = get_file_name(string("junk_discarded"), 1, string(outfile));
 	ofstream junk_discarded_out(junk_discarded_filename);
 
 
 	string info;
-	for(num_reads1 = 0; num_reads1 < NUM_LINES; num_reads1++) {
-	// while (getline(in, info)) {
-		getline(in, info);
+	while (getline(in, info)) {
 
-		if (num_reads1+1 % LINEBLOCKS == 0) {
-			// cout << "\tParsing read " << mum_reads1+1 << "..." << endl;
+		if (num_reads1++ % LINEBLOCKS == 0) {
+			cout << "\tParsing read " << num_reads1 << "..." << endl;
 		}
 
 		string sequence, extra, quality;
 		string read, trimmed_junk, junk_quality, new_quality;
 
 		// read lines from the input file
+		// break if the dataset is incomplete
 		// getline(in, info);		// get fastq read info
-		getline(in, sequence);	// get read
-		getline(in, extra);		// get the third line
-		getline(in, quality);	// get the quality scores 
+		if (!getline(in, sequence)) break;	// get read
+		if (!getline(in, extra)) break;		// get the third line
+		if (!getline(in, quality)) break;	// get the quality scores 
 
 
 		// change quality for edge Ts
@@ -137,7 +137,7 @@ void trim_file (char* infile, char* outfile, int file_num, vector<string> adapte
 
 			// add into hash table
 			string key = myMap->get_key(info);
-			myMap->add(key, info, read, new_quality);
+			myMap->add(key, read, new_quality);
 
 			// write to output file
 			if (debug) write_to_fastq(out, info, read, extra, new_quality);
@@ -176,23 +176,20 @@ void trim_file (char* infile, char* outfile, int file_num, vector<string> adapte
 
 // using master/slave parallel processing
 // trim one read file and put the data into the hash table; multi-threaded
-void MPI_trim_file (char *infile, char *outfile, int file_num, int rank, int size, vector<string> adapters, bool debug) {
-
-	num_reads1 = 0;
-	discarded1 = 0;
+void MPI_trim_file (char *infile, char *outfile, int rank, int size, vector<string> adapters, bool debug) {
 
 	int counter = 0;
 
 	if (rank == 0) {
 
 		// diagnosic files
-		string out_filename = get_file_name(string("trimmed"), file_num, string(outfile));
+		string out_filename = get_file_name(string("trimmed"), 1, string(outfile));
 		ofstream out(out_filename);
-		string junk_filename = get_file_name(string("junk"), file_num, string(outfile));
+		string junk_filename = get_file_name(string("junk"), 1, string(outfile));
 		ofstream junk_out(junk_filename);
-		string discarded_filename = get_file_name(string("discarded"), file_num, string(outfile));
+		string discarded_filename = get_file_name(string("discarded"), 1, string(outfile));
 		ofstream discarded_out(discarded_filename);
-		string junk_discarded_filename = get_file_name(string("junk_discarded"), file_num, string(outfile));
+		string junk_discarded_filename = get_file_name(string("junk_discarded"), 1, string(outfile));
 		ofstream junk_discarded_out(junk_discarded_filename);
 
 		bool continuing = true;
@@ -217,11 +214,10 @@ void MPI_trim_file (char *infile, char *outfile, int file_num, int rank, int siz
 			} else {
 
 				if (num_reads1++ % LINEBLOCKS == 0) {
-					// cout << "\tParsing read " << num_reads1 << "..." << endl;
+					cout << "\tParsing read " << num_reads1 << "..." << endl;
 				}
 
 				int discarding;
-				char* c_info, c_seq, c_extra, c_qual, c_junk_seq, c_junk_qual;
 				string info, read, extra, new_quality, trimmed_junk, junk_quality;
 
 				/* receive messages */
@@ -242,7 +238,8 @@ void MPI_trim_file (char *infile, char *outfile, int file_num, int rank, int siz
 
 					// add into hash table
 					string key = myMap->get_key(info);
-					myMap->add(key, info, read, new_quality);
+
+					myMap->add(key, read, new_quality);
 
 					// write to output file
 					if (debug) write_to_fastq(out, info, read, extra, new_quality);
@@ -296,19 +293,18 @@ void MPI_trim_file (char *infile, char *outfile, int file_num, int rank, int siz
 		const int dest = 0;		// always send messages to the master
 		int is_continuing = 1;	// signal for the master that this worker is continuing
 
-		for (int i = 0; i < NUM_LINES; i++) {
 		string info;
-		// while (getline(in, info)) {
-		getline(in, info);
-
+		while (getline(in, info)) {
 			string sequence, extra, quality;
 			string read, trimmed_junk, junk_quality, new_quality;
 
 			// read lines from the input file
+			// break if dataset is incomplete
 			// getline(in, info); // get fastq read info
-			getline(in, sequence); // get read
-			getline(in, extra); // N/A
-			getline(in, quality); // get the quality scores 
+			if (!getline(in, sequence)) break; // get read
+			if (!getline(in, extra)) break; // N/A
+			if (!getline(in, quality)) break; // get the quality scores
+
 
 			if (counter++ % (size-1) == (rank-1) ) {	// only the workers
 
@@ -356,12 +352,7 @@ void MPI_trim_file (char *infile, char *outfile, int file_num, int rank, int siz
 
 // trim reads in file2 and match them with reads from file1 at the same time
 // using master/slave parallel processing
-void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, int size, vector<string> adapters, bool debug) {
-
-	num_reads2 = 0;
-	discarded2 = 0;
-	num_concat = 0;
-	num_final = 0;
+void MPI_trim_and_match (char *infile, char *outfile, int rank, int size, vector<string> adapters, bool debug) {
 
 	int counter = 0;
 
@@ -376,13 +367,13 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 
 		// diagnosic files
 		// each thread would have its own output file
-		string out_filename = get_file_name(string("trimmed"), file_num, string(outfile));
+		string out_filename = get_file_name(string("trimmed"), 2, string(outfile));
 		ofstream out(out_filename.c_str());
-		string junk_filename = get_file_name(string("junk"), file_num, string(outfile));
+		string junk_filename = get_file_name(string("junk"), 2, string(outfile));
 		ofstream junk_out(junk_filename.c_str());
-		string discarded_filename = get_file_name(string("discarded"), file_num, string(outfile));
+		string discarded_filename = get_file_name(string("discarded"), 2, string(outfile));
 		ofstream discarded_out(discarded_filename.c_str());
-		string junk_discarded_filename = get_file_name(string("junk_discarded"), file_num, string(outfile));
+		string junk_discarded_filename = get_file_name(string("junk_discarded"), 2, string(outfile));
 		ofstream junk_discarded_out(junk_discarded_filename.c_str());
 
 
@@ -416,7 +407,7 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 			} else {
 
 				if (num_reads2++ % LINEBLOCKS == 0) {
-					// cout << "\tParsing read " << num_reads2 << "..." << endl;
+					cout << "\tParsing read " << num_reads2 << "..." << endl;
 				}
 
 				int discarding;
@@ -441,7 +432,7 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 
 					/* move onto the next step (concatenation) */
 					// find key
-					string key = get_key(info);
+					string key = myMap->get_key(info);
 					bool found = myMap->has_key(key);
 
 
@@ -454,7 +445,7 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 					} else {
 
 						// get value from hash table
-						string t_info = myMap->get_info(key);
+						string t_info = myMap->get_info(read_info.first, read_info.second, key, 1);
 						string t_seq = myMap->get_seq(key);
 						string t_qual = myMap->get_qual(key);
 
@@ -519,9 +510,10 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 			// if it's not, put the rest of the reads from file1 into the output file
 			for (auto it : myMap->myMap) {
 				string curr_pos = it.first;
-				string curr_info = it.second.info;
 				string curr_seq = it.second.sequence;
 				string curr_qual = it.second.quality;
+
+				string curr_info = myMap->get_info(read_info.first, read_info.second, curr_pos, 1);
 
 				// quality check
 				if (quality_check(curr_qual)) {
@@ -536,7 +528,7 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 			final_out.close();
 		}
 
-		// cout << "Merging output files..." << endl;
+		cout << "Merging output files..." << endl;
 		merge_files(temp, size);
 
 	} else {
@@ -555,24 +547,23 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 		// in.push(file);
 
 
-		for (int i = 0; i < NUM_LINES; i++) {
 		string info;
-		// while (getline(in, info)) {
-		getline(in, info);
+		while (getline(in, info)) {
 			
 			string sequence, extra, quality;
 			string read, new_quality, trimmed_junk, junk_quality;
 			
-			// read lines from in1
-			getline(in, sequence);
-			getline(in, extra);
-			getline(in, quality);
+			// read lines from in
+			// break if dataset is incomplete
+			if (!getline(in, sequence)) break;
+			if (!getline(in, extra)) break;
+			if (!getline(in, quality)) break;
 
 			// process only if line is assigned
 			if (counter++ % (size-1) == (rank-1) ) {
 
 				//get key for hash table
-				string key = get_key(info);
+				string key = myMap->get_key(info);
 
 				// change quality for edge Ts
 				strip_t(sequence, quality);
@@ -633,7 +624,7 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 							if (quality_check(concat_quality)) {
 								num_final++;
 
-								string new_info = info + string("concatenated_");
+								string new_info = info + string("_concatenated");
 								write_to_fastq(final_out, new_info, concat_read, extra, concat_quality);
 							}
 
@@ -680,10 +671,11 @@ void MPI_trim_and_match (char *infile, char *outfile, int file_num, int rank, in
 
 
 // single threaded read processing function
-double process_reads (char* infile1, char* infile2, char* outfile, int file_num, vector<string> adapters, int lines, bool debug) {
+void process_reads (char* infile1, char* infile2, char* outfile, DNAinfo fastq_info, vector<string> adapters, bool debug) {
 
-	NUM_LINES = lines;
-	discarded1 = 0; discarded2 = 0; num_concat = 0; num_final = 0;
+	read_info = fastq_info;
+
+	num_reads1 = 0; num_reads2 = 0; discarded1 = 0; discarded2 = 0; num_concat = 0; num_final = 0;
 
 	// make a hash table
 	myMap = new hash_table();
@@ -691,22 +683,23 @@ double process_reads (char* infile1, char* infile2, char* outfile, int file_num,
 	//start clock
 	clock_t start_time = clock();
 
-	// cout << "Reading file1..." << endl;
+	cout << "Reading file1..." << endl;
 
 	// get hash table for read file1
-	trim_file(infile1, outfile, 1, adapters, debug);
+	trim_file(infile1, outfile, adapters, debug);
 
 	// files for infile2
-	string out_filename = get_file_name(string("trimmed"), file_num, string(outfile));
+	string out_filename = get_file_name(string("trimmed"), 2, string(outfile));
 	ofstream out2(out_filename);
-	string junk_filename = get_file_name(string("junk"), file_num, string(outfile));
+	string junk_filename = get_file_name(string("junk"), 2, string(outfile));
 	ofstream junk_out2(junk_filename);
-	string discarded_filename = get_file_name(string("discarded"), file_num, string(outfile));
+	string discarded_filename = get_file_name(string("discarded"), 2, string(outfile));
 	ofstream discarded_out2(discarded_filename);
-	string junk_discarded_filename = get_file_name(string("junk_discarded"), file_num, string(outfile));
+	string junk_discarded_filename = get_file_name(string("junk_discarded"), 2, string(outfile));
 	ofstream junk_discarded_out2(junk_discarded_filename);
 
-	// cout << "Reading file2..." << endl;
+
+	cout << "Reading file2..." << endl;
 
 	// file for concatenated reads
 	string final_out_filename = string("final_") + string(outfile);
@@ -721,21 +714,20 @@ double process_reads (char* infile1, char* infile2, char* outfile, int file_num,
 
 
 	string info2;
-	for (num_reads2 = 0; num_reads2 < NUM_LINES; num_reads2++) {
-	// while (getline(in2, info2)) {
-		getline(in2, info2);
+	while (getline(in2, info2)) {
 
-		if (num_reads2+1 % LINEBLOCKS == 0) {
-			// cout << "\tParsing read " << num_reads2+1 << "..." << endl;
+		if (num_reads2++ % LINEBLOCKS == 0) {
+			cout << "\tParsing read " << num_reads2 << "..." << endl;
 		}
 		
 		string sequence2, extra2, quality2;
 		string read2, trimmed_junk2, junk_quality2, new_quality2;
 
 		// file 2
-		getline(in2, sequence2); // get read 2
-		getline(in2, extra2); // N/A
-		getline(in2, quality2); // get the quality score 2
+		// break if dataset is incomplete
+		if (!getline(in2, sequence2)) break; // get read 2
+		if (!getline(in2, extra2)) break; // N/A
+		if (!getline(in2, quality2)) break; // get the quality score 2
 
 		//strip T's for file 1
 		strip_t(sequence2, quality2);
@@ -779,7 +771,7 @@ double process_reads (char* infile1, char* infile2, char* outfile, int file_num,
 
 				string info1, read1, quality1, concatenated, concat_quality;
 
-				info1 = myMap->get_info(key);
+				info1 = myMap->get_info(read_info.first, read_info.second, key, 1);
 				read1 = myMap->get_seq(key);
 				quality1 = myMap->get_qual(key);
 
@@ -800,7 +792,7 @@ double process_reads (char* infile1, char* infile2, char* outfile, int file_num,
 					if (quality_check(concat_quality)) {
 						num_final++;
 
-						string new_info = info1 + string("concatenated_");
+						string new_info = info1 + string("_concatenated");
 						write_to_fastq(final_out, new_info, concatenated, extra2, concat_quality);
 					}
 
@@ -827,9 +819,10 @@ double process_reads (char* infile1, char* infile2, char* outfile, int file_num,
 		// if it's not, put the rest of the reads from file1 into the output file
 		for (auto it : myMap->myMap) {
 			string curr_pos = it.first;
-			string curr_info = it.second.info;
 			string curr_seq = it.second.sequence;
 			string curr_qual = it.second.quality;
+
+			string curr_info = myMap->get_info(read_info.first, read_info.second, curr_pos, 1);
 
 			// quality check
 			if (quality_check(curr_qual)) {
@@ -848,7 +841,7 @@ double process_reads (char* infile1, char* infile2, char* outfile, int file_num,
 	// find elapsed time
 	double elapsed_time = (end_time - start_time) / (double) CLOCKS_PER_SEC;
 
-	// print_diagnostics(elapsed_time, num_reads1, j, discarded1, discarded2, num_concat, num_final);
+	print_diagnostics(elapsed_time, num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final);
 
 	// file2.close();
 	in2.close();
@@ -871,14 +864,12 @@ double process_reads (char* infile1, char* infile2, char* outfile, int file_num,
 
 	// delete hash table
 	delete myMap;
-
-	return elapsed_time;
 }
 
 
-double MPI_process_reads (char* infile1, char* infile2, char* outfile, int rank, int size, vector<string> adapters, int lines, bool debug) {
+void MPI_process_reads (char* infile1, char* infile2, char* outfile, int rank, int size, DNAinfo fastq_info, vector<string> adapters, bool debug) {
 
-	NUM_LINES = lines;
+	read_info = fastq_info;
 
 	discarded1 = 0; discarded2 = 0; num_reads1 = 0; num_reads2 = 0; num_concat = 0; num_final = 0;
 
@@ -890,21 +881,21 @@ double MPI_process_reads (char* infile1, char* infile2, char* outfile, int rank,
 	double start_time = MPI_Wtime();
 
 	if (rank == 0) {
-		// cout << "Reading file1..." << endl;
+		cout << "Reading file1..." << endl;
 	}
 
 	// trim read 1
-	MPI_trim_file(infile1, outfile, 1, rank, size, adapters, debug);	// hash table would only exist in the master process (rank 0)
+	MPI_trim_file(infile1, outfile, rank, size, adapters, debug);	// hash table would only exist in the master process (rank 0)
 
 	// wait for every process to finish
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	if (rank == 0) {
-		// cout << "Reading file2..." << endl;
+		cout << "Reading file2..." << endl;
 	}
 
 	// trim read 2 and merge read 1 and 2 together
-	MPI_trim_and_match(infile2, outfile, 2, rank, size, adapters, debug);
+	MPI_trim_and_match(infile2, outfile, rank, size, adapters, debug);
 
 	// wait for every process to finish
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -918,9 +909,7 @@ double MPI_process_reads (char* infile1, char* infile2, char* outfile, int rank,
 
 
 	if (rank == 0) {
-		// print_diagnostics(end_time - start_time, num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final);
+		print_diagnostics(end_time - start_time, num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final);
 	}
-
-	return end_time - start_time;
 }
 

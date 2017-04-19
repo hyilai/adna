@@ -17,6 +17,9 @@
 using namespace std;
 
 
+struct DNAinfo;
+DNAinfo fastq_info;
+
 void print_argument_directions(char* program) {
 	cerr << "Usage: " << program << " <path_to_file1> <path_to_file2> <output_filename> " << endl;
 	cerr << "optional: --adapter <path_to_adapter_file> (default: truseq adapters)";
@@ -153,8 +156,8 @@ bool match_files (string &file1, string &file2) {
 		}
 
 		// edit info
-		// fastq_info.first = line1_first;
-		// fastq_info.second = line1_second;
+		fastq_info.first = line1_first;
+		fastq_info.second = line1_second;
 
 		return true;
 	}
@@ -261,9 +264,9 @@ int main (int argc, char** argv) {
 	if (paired_file) {
 
 		if (size > 1) {
-			MPI_process_reads(infile1, infile2, argv[3], rank, size, adapters, debug);
+			MPI_process_reads(infile1, infile2, argv[3], rank, size, fastq_info, adapters, debug);
 		} else {
-			process_reads(infile1, infile2, argv[3], adapters, debug);
+			process_reads(infile1, infile2, argv[3], fastq_info, adapters, debug);
 		}
 
 	} else {

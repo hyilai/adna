@@ -104,8 +104,8 @@ int main (int argc, char** argv) {
 	cout << "Total reads: " << j << endl;
 	cout << "Number matched: " << num_matched << endl;
 	cout << "Number of perfectly merged reads: " << num_perfect << endl;
-	cout << "Average deviation from actual length for all reads: " << (double)total_derv/(double)j << endl;
-	cout << "Average deviation from actual length for non-perfectly merged reads: " << (double)total_derv/(double)(j - num_perfect) << endl;
+	cout << "Average derivation from actual length: " << (double)total_derv/(double)j << endl;
+	cout << "Average derivation from actual length for non-perfectly merged reads: " << (double)total_derv/(double)(j - num_perfect) << endl;
 
 	// clock ends
 	clock_t end = clock();

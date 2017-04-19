@@ -83,25 +83,29 @@ string get_rank_file_name(string type, int file_num, int rank, string outfile) {
 }
 
 
-// get key for hash table
-string get_key (string info) {
+bool is_same_pair (string info1, string info2) {
 
-	// tokenize
-	stringstream ss;
-	ss.str(info);
-	string token;
-	for (int i = 0; i < 5; i++) {
-		getline(ss, token, ':');
+	string info1_first, info1_second, info2_first, info2_second;
+
+	size_t found = info1.find(" ");
+	if (found) {
+		info1_first = info1.substr(0, found);
+		info1_second = info1.substr(found+1);
 	}
-		
-	string x;
-	getline(ss, x, ':');
-	string y;
-	getline(ss, y, ' ');
-	
-	string key = x + ":" + y;
 
-	return key;	
+	found = info2.find(" ");
+	if (found) {
+		info2_first = info2.substr(0, found);
+		info2_second = info2.substr(found+1);
+	}
+
+
+	// check if the reads are of the same pair
+	if (info1_first.compare(info2_first) == 0) {
+		return true;
+	} else {
+		return false;
+	}
 }
 
 

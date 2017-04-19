@@ -55,17 +55,19 @@ public:
 				int s = similarity(str1, str2, i, j);
 				match = grid[i-1][j-1] + s;
 
-				// deletion score
-				for (int k = i-1; k > 0; k--) {
-					int temp = grid[i-k][j] - gap(k, grid[i-k][j]);
-					if (deletion < temp) deletion = temp;
-				}
+				// // deletion score
+				// for (int k = i-1; k > 0; k--) {
+				// 	int temp = grid[i-k][j] - gap(k, grid[i-k][j]);
+				// 	if (deletion < temp) deletion = temp;
+				// }
+				deletion = grid[i-1][j] - gap(1, grid[i-1][j]);
 
-				// insertion score
-				for (int l = j-1; l > 0; l--) {
-					int temp = grid[i][j-l] - gap(l, grid[i][j-l]);
-					if (insertion < temp) insertion = temp;
-				}
+				// // insertion score
+				// for (int l = j-1; l > 0; l--) {
+				// 	int temp = grid[i][j-l] - gap(l, grid[i][j-l]);
+				// 	if (insertion < temp) insertion = temp;
+				// }
+				deletion = grid[i][j-1] - gap(1, grid[i][j-1]);
 
 				// find maximum between the three; minimum score is 0
 				score = (score < match) ? match : score;
@@ -124,7 +126,8 @@ private:
 	int gap (int i, int prev_score) {
 		int n = prev_score / MATCH;
 		// original: GAP_PENALTY + GAP_EXTENSION * i
-		return (GAP_PENALTY / (n + 1) + GAP_EXTENSION) * i;
+		// return (GAP_PENALTY / (n + 1) + GAP_EXTENSION) * i;
+		return GAP_PENALTY + GAP_EXTENSION * i;
 	}
 
 	int similarity (string str1, string str2, int i, int j) {
@@ -243,7 +246,8 @@ string SmithWaterman::trim_from_ending () {
 		int upper_left = grid[i-1][j-1];
 		int upper = grid[i-1][j];
 
-		int next_i, next_j;
+		int next_i = i;
+		int next_j = j;
 		int next_highest = 0;
 
 		if (left > next_highest) {
@@ -275,6 +279,7 @@ string SmithWaterman::trim_from_ending () {
 	// trim only if the length of the matching substring is more than the threshold
 	// everything after the matching substring is thrown out as well
 	if (highest_i - i >= match_length) {
+		// cout << highest_i << " " << i << endl;
 		trimmed = str1.substr(i-1, str1.length() - i);
 		trimmed_q = q1.substr(i-1, q1.length() - i);
 		matched = str1.substr(i-1, highest_i - i);
@@ -336,7 +341,8 @@ bool SmithWaterman::match_reads () {
 		int upper_left = grid[i-1][j-1];
 		int upper = grid[i-1][j];
 
-		int next_i, next_j;
+		int next_i = i;
+		int next_j = j;
 		int next_highest = 0;
 
 		if (left > next_highest) {

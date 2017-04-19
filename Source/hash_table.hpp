@@ -14,8 +14,8 @@ public:
 	hash_table();
 	std::string get_key (std::string);
 	bool has_key(std::string);
-	bool add(std::string, std::string, std::string, std::string);
-	std::string get_info(std::string);
+	bool add(std::string, std::string, std::string);
+	std::string get_info (std::string, std::string, std::string, int);
 	std::string get_seq(std::string);
 	std::string get_qual(std::string);
 	bool erase(std::string);
