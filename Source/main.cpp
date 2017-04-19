@@ -260,11 +260,7 @@ int main (int argc, char** argv) {
 
 	if (paired_file) {
 
-		if (size > 1) {
-			MPI_process_reads(infile1, infile2, argv[3], rank, size, adapters, debug);
-		} else {
-			process_reads(infile1, infile2, argv[3], adapters, debug);
-		}
+		process_reads(infile1, infile2, argv[3], rank, size, adapters, debug);
 
 	} else {
 		if (rank == 0) cerr << "Error: input files are not paired" << endl;
