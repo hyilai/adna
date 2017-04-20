@@ -14,7 +14,8 @@
 
 using namespace std;
 
-typedef vector<vector<int> > Grid;
+// typedef vector<vector<int> > Grid;
+typedef int* Grid;
 
 //similarity function
 #define MATCH 5
@@ -27,47 +28,64 @@ typedef vector<vector<int> > Grid;
 
 class functions {
 public:
+
+	int get_index (int r, int c) {
+		return r*(n+1) + c;
+	}
+
 	/**
 	 **	this function calculates the individual scores
 	 ** for each cell in the table
 	 **/
-	Grid build_grid (string str1, string str2) {
+	void build_grid (Grid &grid, string str1, string str2) {
 
-		int m = str1.length();
-		int n = str2.length();
+		m = str1.length();
+		n = str2.length();
 
-		// make a grid of size m by n
-		grid.resize(m+1, vector<int>(n+1, 0));
+		// make a grid of size m+1 by n+1
+		// grid.resize(m+1, vector<int>(n+1, 0));
+		// make a 2D grid masked as a 1D array
+		grid = new int[(m+1) * (n+1)];
 
 		int highest = 0;
 		highest_i = 0;
 		highest_j = 0;
 
 		// for each cell in the grid
-		for (int i = 1; i < grid.size(); i++) {
-			char a = str1[i-1];
-			for (int j = 1; j < grid[i].size(); j++) {
+		for (int i = 0; i < m+1; i++) {
+			for (int j = 0; j < n+1; j++) {
+
+				if (i == 0 || j == 0) {
+					grid[get_index(i, j)] = 0;
+					continue;
+				}
+
+				char a = str1[i-1];
 				char b = str2[j-1];
 
 				int score = 0, match = 0, deletion = 0, insertion = 0;
 
 				// match/mismatch score
-				int s = similarity(str1, str2, i, j);
-				match = grid[i-1][j-1] + s;
+				int s = similarity(str1, str2, i, j, grid[get_index(i-1, j-1)]);
+				// match = grid[i-1][j-1] + s;
+				match = grid[get_index(i-1, j-1)] + s;
 
 				// // deletion score
 				// for (int k = i-1; k > 0; k--) {
 				// 	int temp = grid[i-k][j] - gap(k, grid[i-k][j]);
 				// 	if (deletion < temp) deletion = temp;
 				// }
-				deletion = grid[i-1][j] - gap(1, grid[i-1][j]);
+				// deletion = grid[i-1][j] - gap(1, grid[i-1][j]);
+				deletion = grid[get_index(i-1, j)] - (GAP_PENALTY + GAP_EXTENSION * i);
 
 				// // insertion score
 				// for (int l = j-1; l > 0; l--) {
 				// 	int temp = grid[i][j-l] - gap(l, grid[i][j-l]);
 				// 	if (insertion < temp) insertion = temp;
 				// }
-				deletion = grid[i][j-1] - gap(1, grid[i][j-1]);
+				// insertion = grid[i][j-1] - gap(1, grid[i][j-1]);
+				insertion = grid[get_index(i, j-1)] - (GAP_PENALTY + GAP_EXTENSION * i);
+
 
 				// find maximum between the three; minimum score is 0
 				score = (score < match) ? match : score;
@@ -75,7 +93,8 @@ public:
 				score = (score < insertion) ? insertion : score;
 
 				// set cell to the maximum score
-				grid[i][j] = score;
+				// grid[i][j] = score;
+				grid[get_index(i, j)] = score;
 
 				// remember the highest score in the grid
 				if (score > highest) {
@@ -85,7 +104,7 @@ public:
 				}
 			}
 		}
-		return grid;
+		// return grid;
 	}
 
 	void print_grid (string str1, string str2, Grid grid) {
@@ -103,7 +122,8 @@ public:
 				cout << i << "\t" << "- ";
 			}
 			for (int j = 0; j <= n; j++) {
-				cout << setw(3) << grid[i][j] << " ";
+				// cout << setw(3) << grid[i][j] << " ";
+				cout << setw(3) << grid[get_index(i, j)] << " ";
 			}
 			cout << endl;
 		}
@@ -119,18 +139,18 @@ public:
 	}
 
 private:
-	Grid grid;
+	int m, n;
 	int highest_i;
 	int highest_j;
 	
 	int gap (int i, int prev_score) {
-		int n = prev_score / MATCH;
+		// int n = prev_score / MATCH;
 		// original: GAP_PENALTY + GAP_EXTENSION * i
 		// return (GAP_PENALTY / (n + 1) + GAP_EXTENSION) * i;
 		return GAP_PENALTY + GAP_EXTENSION * i;
 	}
 
-	int similarity (string str1, string str2, int i, int j) {
+	int similarity (string str1, string str2, int i, int j, int prev) {
 		char a = str1[i-1];
 		char b = str2[j-1];
 		
@@ -140,7 +160,8 @@ private:
 		} else {
 
 			// if the last set of characters matched between str1 and str2
-			if (grid[i-1][j-1] > 0) {
+			// if (grid[i-1][j-1] > 0) {
+			if (prev > 0) {
 				return (a == b) ? MATCH : MISMATCH;
 			} else {	// else return a harsher score
 				return (a == b) ? MATCH - j*j : MISMATCH;
@@ -149,27 +170,25 @@ private:
 	}
 };
 
-
 SmithWaterman::SmithWaterman (string str1, string str2, string q1, int match_length) : str1(str1), str2(str2), q1(q1), match_length(match_length) {
 	
-	q2 = "";
-	trimmed = "";
 	functions f;
 
-	int m = str1.length();
-	int n = str2.length();
+	q2 = "";
+	trimmed = "";
+
+	m = str1.length();
+	n = str2.length();
 
 	if (m == 0 || n == 0) {
 		cout << "Error: string(s) length is zero" << endl;
 		exit(EXIT_FAILURE);
 	}
 
-	grid = f.build_grid(str1, str2);
+	f.build_grid(grid, str1, str2);
 
 	highest_i = f.get_highest_i();
 	highest_j = f.get_highest_j();
-
-	//f.print_grid(str1,str2,grid);
 }
 
 
@@ -178,15 +197,15 @@ SmithWaterman::SmithWaterman (string str1, string str2, string q1, string q2, in
 	trimmed = "";
 	functions f;
 
-	int m = str1.length();
-	int n = str2.length();
+	m = str1.length();
+	n = str2.length();
 
 	if (m == 0 || n == 0) {
 		cout << "Error: string(s) length is zero" << endl;
 		exit(EXIT_FAILURE);
 	}
 
-	grid = f.build_grid(str1, str2);
+	f.build_grid(grid, str1, str2);
 
 	highest_i = f.get_highest_i();
 	highest_j = f.get_highest_j();
@@ -194,15 +213,19 @@ SmithWaterman::SmithWaterman (string str1, string str2, string q1, string q2, in
 	//f.print_grid(str1,str2,grid);
 }
 
+int SmithWaterman::get_index (int r, int c) {
+	return r*(n+1) + c;
+}
+
 int SmithWaterman::get_highest_score () {
-	return grid[highest_i][highest_j];
+	return grid[get_index(highest_i, highest_j)];
 }
 
 string SmithWaterman::trim_both_sides () {
 	string trimmed = trim_from_beginning();
 	str1 = trimmed;
 	functions f;
-	grid = f.build_grid(str1, str2);
+	f.build_grid(grid, str1, str2);
 
 	//f.print_grid(str1,str2,grid);
 
@@ -237,14 +260,15 @@ string SmithWaterman::trim_from_beginning () {
 string SmithWaterman::trim_from_ending () {
 
 	//get trimmed sequence
-	int curr_score = grid[highest_i][highest_j];	//highest score in the grid
+	// int curr_score = grid[highest_i][highest_j];	//highest score in the grid
+	int curr_score = grid[get_index(highest_i, highest_j)];
 	int i = highest_i;
 	int j = highest_j;
 	while (curr_score != 0 && i > 0 && j > 0) {
-		int current = grid[i][j];
-		int left = grid[i][j-1];
-		int upper_left = grid[i-1][j-1];
-		int upper = grid[i-1][j];
+		int current = grid[get_index(i, j)];
+		int left = grid[get_index(i, j-1)];
+		int upper_left = grid[get_index(i-1, j-1)];
+		int upper = grid[get_index(i-1, j)];
 
 		int next_i = i;
 		int next_j = j;
@@ -279,7 +303,6 @@ string SmithWaterman::trim_from_ending () {
 	// trim only if the length of the matching substring is more than the threshold
 	// everything after the matching substring is thrown out as well
 	if (highest_i - i >= match_length) {
-		// cout << highest_i << " " << i << endl;
 		trimmed = str1.substr(i-1, str1.length() - i);
 		trimmed_q = q1.substr(i-1, q1.length() - i);
 		matched = str1.substr(i-1, highest_i - i);
@@ -292,7 +315,6 @@ string SmithWaterman::trim_from_ending () {
 		matched = "";
 	}
 
-	// cout << i << " " << r << endl;
 	return r;
 }
 
@@ -327,19 +349,19 @@ string SmithWaterman::get_matched_quality() {
 bool SmithWaterman::match_reads () {
 
 	// get the highest score in the grid
-	int highest =  grid[highest_i][highest_j];
+	// int highest =  grid[highest_i][highest_j];
 
 	// go back through the grid to find the matching subsequence
-	int curr_score = highest;
+	int curr_score = grid[get_index(highest_i, highest_j)];
 	int i = highest_i;
 	int j = highest_j;
 	int prev_i = i;
 	int prev_j = j;
 	while (curr_score != 0 && i > 0 && j > 0) {
-		int current = grid[i][j];
-		int left = grid[i][j-1];
-		int upper_left = grid[i-1][j-1];
-		int upper = grid[i-1][j];
+		int current = grid[get_index(i, j)];
+		int left = grid[get_index(i, j-1)];
+		int upper_left = grid[get_index(i-1, j-1)];
+		int upper = grid[get_index(i-1, j)];
 
 		int next_i = i;
 		int next_j = j;
@@ -393,5 +415,5 @@ bool SmithWaterman::match_reads () {
 
 // destructor
 SmithWaterman::~SmithWaterman() {
-
+	delete [] grid;
 }
