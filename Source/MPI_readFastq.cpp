@@ -105,26 +105,34 @@ void process_reads (char* infile1, char* infile2, char* outfile, int rank, int s
 	// in2.push(boost::iostreams::gzip_decompressor());
 	// in2.push(file2);
 
+	bool has_more1, has_more2;
 
-	string info1, info2;
-	while (getline(in1, info1) && getline(in2, info2)) {
+
+	// string info1, info2;
+	// while (getline(in1, info1) && getline(in2, info2)) {
+	while(1) {
 		
-		string sequence1, extra1, quality1;
+		string info1, sequence1, extra1, quality1;
 		string read1, trimmed_junk1, junk_quality1, new_quality1;
-		string sequence2, extra2, quality2;
+		string info2, sequence2, extra2, quality2;
 		string read2, trimmed_junk2, junk_quality2, new_quality2;
+
+		has_more1 = read_from_fastq(in1, info1, sequence1, extra1, quality1);
+		has_more2 = read_from_fastq(in2, info2, sequence2, extra2, quality2);
+
+		if (!has_more1 || !has_more2) break;
 
 		// file 1
 		// break if dataset is incomplete
-		if (!getline(in1, sequence1)) break; // get read 1
-		if (!getline(in1, extra1)) break; // N/A
-		if (!getline(in1, quality1)) break; // get the quality score 1
+		// if (!getline(in1, sequence1)) break; // get read 1
+		// if (!getline(in1, extra1)) break; // N/A
+		// if (!getline(in1, quality1)) break; // get the quality score 1
 
 		// file 2
 		// break if dataset is incomplete
-		if (!getline(in2, sequence2)) break; // get read 2
-		if (!getline(in2, extra2)) break; // N/A
-		if (!getline(in2, quality2)) break; // get the quality score 2
+		// if (!getline(in2, sequence2)) break; // get read 2
+		// if (!getline(in2, extra2)) break; // N/A
+		// if (!getline(in2, quality2)) break; // get the quality score 2
 
 
 		// don't process this set of data if it's not for this process rank

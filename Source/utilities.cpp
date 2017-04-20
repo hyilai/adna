@@ -99,6 +99,8 @@ bool is_same_pair (string info1, string info2) {
 		info2_second = info2.substr(found+1);
 	}
 
+	// cout << info1_first << endl;
+	// cout << info2_first << endl;
 
 	// check if the reads are of the same pair
 	if (info1_first.compare(info2_first) == 0) {
@@ -108,6 +110,17 @@ bool is_same_pair (string info1, string info2) {
 	}
 }
 
+
+bool read_from_fastq (ifstream &in, string &info, string &sequence, string &extra, string &quality) {
+
+	// return false if the data is incomplete
+	if (!getline(in, info)) return false; // get info
+	if (!getline(in, sequence)) return false; // get read
+	if (!getline(in, extra)) return false; // third line
+	if (!getline(in, quality)) return false; // get the quality score
+
+	return true;
+}
 
 
 void write_to_fastq (ofstream &file_stream, string info, string seq, string extra, string qual) {
@@ -119,7 +132,7 @@ void write_to_fastq (ofstream &file_stream, string info, string seq, string extr
 
 
 // print diagnostics after the program runs
-void print_diagnostics (double elapsed_time, int num_reads1, int num_reads2, int discarded1, int discarded2, int num_concat, int num_final) {
+void print_diagnostics (double elapsed_time, int num_reads1, int num_reads2, int discarded1, int discarded2, int num_concat, int num_final, int num_non_concat1, int num_non_concat2) {
 
 	int elapsed_sec, elapsed_min, elapsed_hrs, elapsed_days;
 	int seconds = (int) elapsed_time;
@@ -147,5 +160,7 @@ void print_diagnostics (double elapsed_time, int num_reads1, int num_reads2, int
 	cout << "Number of discarded reads in file 2 due to being trimmed too short: " << discarded2 << endl;
 	cout << "Number of concatenated reads: " << num_concat << endl;
 	cout << "NUmber of concatenated reads that passed quality check: " << num_final << endl;
+	cout << "NUmber of non-concatenated reads from file 1 that passed quality check: " << num_non_concat1 << endl;
+	cout << "NUmber of non-concatenated reads from file 2 that passed quality check: " << num_non_concat2 << endl;
 
 }
