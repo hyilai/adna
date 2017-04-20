@@ -34,31 +34,30 @@
 using namespace std;
 
 // tags for MPI messages
-// const int DATA_TAG = 0;
-const int DISCARD_TAG = 0;
-const int INFO_TAG = 1;
-const int SEQ_TAG = 2;
-const int EXTRA_TAG = 3;
-const int QUAL_TAG = 4;
-const int JUNK_SEQ_TAG = 5;
-const int JUNK_QUAL_TAG = 6;
-const int END_TAG = 10;
-const int KEY_TAG = 11;
-const int HASH_INFO_TAG = 12;
-const int HASH_SEQ_TAG = 13;
-const int HASH_QUAL_TAG = 14;
-const int NUM_CONCAT_TAG = 15;
-const int NUM_FINAL_TAG = 16;
+const int NUM_DISCARDED1_TAG = 0;
+const int NUM_DISCARDED2_TAG = 1;
+const int NUM_CONCAT_TAG = 2;
+const int NUM_FINAL_TAG = 3;
+const int NUM_NON_CONCAT1_TAG = 4;
+const int NUM_NON_CONCAT2_TAG = 5;
 
 
 // numbers for diagnostics
-int num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final;
+int num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final, num_non_concat1, num_non_concat2;
+
+
+int gather_number (int original_value, int source, int tag) {
+	MPI_Status status;
+	int temp;
+	MPI_Recv(&temp, 1, MPI_INT, source, tag, MPI_COMM_WORLD, &status);
+	return original_value + temp;
+}
 
 
 // single threaded read processing function
-void process_reads (char* infile1, char* infile2, char* outfile, vector<string> adapters, int rank, int size, bool debug) {
+void process_reads (char* infile1, char* infile2, char* outfile, int rank, int size, vector<string> adapters, bool debug) {
 
-	num_reads1 = 0; num_reads2 = 0; discarded1 = 0; discarded2 = 0; num_concat = 0; num_final = 0;
+	num_reads1 = 0; num_reads2 = 0; discarded1 = 0; discarded2 = 0; num_concat = 0; num_final = 0; num_non_concat1 = 0; num_non_concat2 = 0;
 
 	//start clock
 	clock_t start_time = clock();
@@ -85,13 +84,18 @@ void process_reads (char* infile1, char* infile2, char* outfile, vector<string> 
 	ofstream junk_discarded_out2(junk_discarded_filename2);
 
 
+	// file for non-concatenated reads
+	string non_concat_filename1 = get_rank_file_name(string("non_concat"), 1, rank, string(outfile));
+	ofstream non_concat_out1(non_concat_filename1.c_str());
+	string non_concat_filename2 = get_rank_file_name(string("non_concat"), 2, rank, string(outfile));
+	ofstream non_concat_out2(non_concat_filename2.c_str());
+
 	// file for concatenated reads
-	string non_concat_out_filename1 = get_rank_file_name(string("non_concat_"), 1, rank, string(outfile));
-	ofstream non_concat_out1(concat_out_filename1.c_str());
-	string non_concat_out_filename2 = get_rank_file_name(string("non_concat_"), 2, rank, string(outfile));
-	ofstream non_concat_out2(non_concat_out_filename2.c_str());
-	string concat_out_filename = string(itoa(rank)) + string("_concat_") + string(outfile);
-	ofstream concat_out(concat_out_filename.c_str());
+	stringstream ss;
+	ss << rank << "_concat_" << string(outfile);
+	string concat_filename = ss.str();
+	ofstream concat_out(concat_filename.c_str());
+
 
 	ifstream in1(infile1);
 	ifstream in2(infile2);
@@ -103,7 +107,7 @@ void process_reads (char* infile1, char* infile2, char* outfile, vector<string> 
 
 
 	string info1, info2;
-	while (getline(in2, info2) && getline(in2, info2)) {
+	while (getline(in1, info1) && getline(in2, info2)) {
 		
 		string sequence1, extra1, quality1;
 		string read1, trimmed_junk1, junk_quality1, new_quality1;
@@ -124,12 +128,13 @@ void process_reads (char* infile1, char* infile2, char* outfile, vector<string> 
 
 
 		// don't process this set of data if it's not for this process rank
-		if (num_reads1 % size != rank) continue;
+		num_reads1++;
+		num_reads2++;
+		if ((num_reads1-1) % size != rank) continue;
 
 
-		if (num_reads1++ % LINEBLOCKS == 0) {
+		if (num_reads1 % LINEBLOCKS == 0) {
 			cout << "Parsing read " << num_reads1 << "..." << endl;
-			num_reads2++;
 		}
 
 		if (!is_same_pair(info1, info2)) {
@@ -219,9 +224,15 @@ void process_reads (char* infile1, char* infile2, char* outfile, vector<string> 
 		if (!concat_good) {
 			// output the two reads separately
 			if (read1_good && quality_check(quality1)) {
+
+				num_non_concat1++;
 				write_to_fastq(non_concat_out1, info1, read1, extra2, quality1);
+
 			} else if (read2_good && quality_check(new_quality2)) {
+
+				num_non_concat2++;
 				write_to_fastq(non_concat_out2, info2, read2, extra2, new_quality2);
+
 			}
 		}
 	
@@ -235,9 +246,13 @@ void process_reads (char* infile1, char* infile2, char* outfile, vector<string> 
 	double elapsed_time = (end_time - start_time) / (double) CLOCKS_PER_SEC;
 
 
-	// file2.close();
+	in1.close();
 	in2.close();
 
+	out1.close();
+	junk_out1.close();
+	discarded_out1.close();
+	junk_discarded_out1.close();
 	out2.close();
 	junk_out2.close();
 	discarded_out2.close();
@@ -259,40 +274,67 @@ void process_reads (char* infile1, char* infile2, char* outfile, vector<string> 
 	non_concat_out1.close();
 	non_concat_out2.close();
 
+	
 	if (rank == 0) {
 
 		/* merge files */
 		if (debug) {
-			out_filename1 = get_file_name(string("trimmed"), 1, string(outfile));
-			junk_filename1 = get_file_name(string("junk"), 1, string(outfile));
-			discarded_filename1 = get_file_name(string("discarded"), 1, string(outfile));
-			junk_discarded_filename1 = get_file_name(string("junk_discarded"), 1, string(outfile));
+			string out_filename1 = get_file_name(string("trimmed"), 1, string(outfile));
+			string junk_filename1 = get_file_name(string("junk"), 1, string(outfile));
+			string discarded_filename1 = get_file_name(string("discarded"), 1, string(outfile));
+			string junk_discarded_filename1 = get_file_name(string("junk_discarded"), 1, string(outfile));
 
-			out_filename2 = get_file_name(string("trimmed"), 2, string(outfile));
-			junk_filename2 = get_file_name(string("junk"), 2, string(outfile));
-			discarded_filename2 = get_file_name(string("discarded"), 2, string(outfile));
-			junk_discarded_filename2 = get_file_name(string("junk_discarded"), 2, string(outfile));
+			string out_filename2 = get_file_name(string("trimmed"), 2, string(outfile));
+			string junk_filename2 = get_file_name(string("junk"), 2, string(outfile));
+			string discarded_filename2 = get_file_name(string("discarded"), 2, string(outfile));
+			string junk_discarded_filename2 = get_file_name(string("junk_discarded"), 2, string(outfile));
 
-			merge_files(out_filename1, size);
-			merge_files(junk_filename1, size);
-			merge_files(discarded_filename1, size);
-			merge_files(junk_discarded_filename1, size);
-			merge_files(out_filename2, size);
-			merge_files(junk_filename2, size);
-			merge_files(discarded_filename2, size);
-			merge_files(junk_discarded_filename2, size);
+			merge_worker_files(out_filename1, size);
+			merge_worker_files(junk_filename1, size);
+			merge_worker_files(discarded_filename1, size);
+			merge_worker_files(junk_discarded_filename1, size);
+			merge_worker_files(out_filename2, size);
+			merge_worker_files(junk_filename2, size);
+			merge_worker_files(discarded_filename2, size);
+			merge_worker_files(junk_discarded_filename2, size);
 		}
 
-		non_concat_out_filename1 = get_file_name(string("non_concat_"), 1, string(outfile));
-		non_concat_out_filename2 = get_file_name(string("non_concat_"), 2, string(outfile));
-		concat_out_filename = string("concat_") + string(outfile);
+		string non_concat_filename1 = get_file_name(string("non_concat"), 1, string(outfile));
+		string non_concat_filename2 = get_file_name(string("non_concat"), 2, string(outfile));
+		string concat_filename = string("concat_") + string(outfile);
 
-		merge_files(non_concat_out_filename1, size);
-		merge_files(non_concat_out_filename2, size);
-		merge_files(concat_out_filename, size);
+		merge_worker_files(non_concat_filename1, size);
+		merge_worker_files(non_concat_filename2, size);
+		merge_worker_files(concat_filename, size);
 
+		
+		// get the total numbers for diagnostics
+		for (int i = 1; i < size; i++) {
+			discarded1 = gather_number(discarded1, i, NUM_DISCARDED1_TAG);
+			discarded2 = gather_number(discarded2, i, NUM_DISCARDED2_TAG);
+			num_concat = gather_number(num_concat, i, NUM_CONCAT_TAG);
+			num_final = gather_number(num_final, i, NUM_FINAL_TAG);
+			num_non_concat1 = gather_number(num_non_concat1, i, NUM_NON_CONCAT1_TAG);
+			num_non_concat2 = gather_number(num_non_concat2, i, NUM_NON_CONCAT2_TAG);
+		}
+
+
+		// end timer
+		clock_t end_time = clock();
+
+		// find elapsed time
+		double elapsed_time = (end_time - start_time) / (double) CLOCKS_PER_SEC;
 
 		/* print */
-		print_diagnostics(elapsed_time, num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final);
+		print_diagnostics(elapsed_time, num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final, num_non_concat1, num_non_concat2);
+
+	} else {
+		MPI_Request request;
+		MPI_Isend(&discarded1, 1, MPI_INT, 0, NUM_DISCARDED1_TAG, MPI_COMM_WORLD, &request);
+		MPI_Isend(&discarded2, 1, MPI_INT, 0, NUM_DISCARDED2_TAG, MPI_COMM_WORLD, &request);
+		MPI_Isend(&num_concat, 1, MPI_INT, 0, NUM_CONCAT_TAG, MPI_COMM_WORLD, &request);
+		MPI_Isend(&num_final, 1, MPI_INT, 0, NUM_FINAL_TAG, MPI_COMM_WORLD, &request);
+		MPI_Isend(&num_non_concat1, 1, MPI_INT, 0, NUM_NON_CONCAT1_TAG, MPI_COMM_WORLD, &request);
+		MPI_Isend(&num_non_concat2, 1, MPI_INT, 0, NUM_NON_CONCAT2_TAG, MPI_COMM_WORLD, &request);
 	}
 }
