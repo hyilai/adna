@@ -122,19 +122,6 @@ void process_reads (char* infile1, char* infile2, char* outfile, int rank, int s
 
 		if (!has_more1 || !has_more2) break;
 
-		// file 1
-		// break if dataset is incomplete
-		// if (!getline(in1, sequence1)) break; // get read 1
-		// if (!getline(in1, extra1)) break; // N/A
-		// if (!getline(in1, quality1)) break; // get the quality score 1
-
-		// file 2
-		// break if dataset is incomplete
-		// if (!getline(in2, sequence2)) break; // get read 2
-		// if (!getline(in2, extra2)) break; // N/A
-		// if (!getline(in2, quality2)) break; // get the quality score 2
-
-
 		// don't process this set of data if it's not for this process rank
 		num_reads1++;
 		num_reads2++;

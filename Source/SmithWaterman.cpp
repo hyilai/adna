@@ -23,7 +23,7 @@ typedef int* Grid;
 
 //gap-scoring scheme
 #define GAP_EXTENSION 10
-#define GAP_PENALTY 7
+#define GAP_PENALTY 10
 
 
 class functions {
@@ -67,24 +67,13 @@ public:
 
 				// match/mismatch score
 				int s = similarity(str1, str2, i, j, grid[get_index(i-1, j-1)]);
-				// match = grid[i-1][j-1] + s;
 				match = grid[get_index(i-1, j-1)] + s;
 
 				// // deletion score
-				// for (int k = i-1; k > 0; k--) {
-				// 	int temp = grid[i-k][j] - gap(k, grid[i-k][j]);
-				// 	if (deletion < temp) deletion = temp;
-				// }
-				// deletion = grid[i-1][j] - gap(1, grid[i-1][j]);
-				deletion = grid[get_index(i-1, j)] - (GAP_PENALTY + GAP_EXTENSION * i);
+				deletion = grid[get_index(i-1, j)] - GAP_PENALTY;
 
 				// // insertion score
-				// for (int l = j-1; l > 0; l--) {
-				// 	int temp = grid[i][j-l] - gap(l, grid[i][j-l]);
-				// 	if (insertion < temp) insertion = temp;
-				// }
-				// insertion = grid[i][j-1] - gap(1, grid[i][j-1]);
-				insertion = grid[get_index(i, j-1)] - (GAP_PENALTY + GAP_EXTENSION * i);
+				insertion = grid[get_index(i, j-1)] - GAP_PENALTY;
 
 
 				// find maximum between the three; minimum score is 0
@@ -93,7 +82,6 @@ public:
 				score = (score < insertion) ? insertion : score;
 
 				// set cell to the maximum score
-				// grid[i][j] = score;
 				grid[get_index(i, j)] = score;
 
 				// remember the highest score in the grid
