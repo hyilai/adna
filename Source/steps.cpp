@@ -33,7 +33,7 @@ string trim_read (string sequence, string quality, string &new_quality, string &
 
 	for (int i = 0; i < adapters.size(); i++) {
 
-		SmithWaterman* sw = new SmithWaterman(sequence, adapters[i], quality, "", minimum_match_length);
+		SmithWaterman* sw = new SmithWaterman(sequence, adapters[i], quality, minimum_match_length);
 
 		int curr_high_score = sw->get_highest_score();
 
@@ -58,16 +58,14 @@ string trim_read (string sequence, string quality, string &new_quality, string &
 string concat_reads (string sequence1, string sequence2, string quality1, string quality2, string &new_quality) {
 	string concat = "";
 	new_quality = "";
-	int highest_score = 0;
+	// int highest_score = 0;
 
 
 	SmithWaterman* sw = new SmithWaterman(sequence1, sequence2, quality1, quality2, minimum_match_length);
-	int curr_high_score = sw->get_highest_score();
-	if (highest_score < curr_high_score) {
-		if (sw->match_reads()) {
-			concat = sw->get_matched_string();
-			new_quality = sw->get_matched_quality();
-		}
+	// int curr_high_score = sw->get_highest_score();
+	if (sw->match_reads()) {
+		concat = sw->get_matched_string();
+		new_quality = sw->get_matched_quality();
 	}
 	delete sw;
 
