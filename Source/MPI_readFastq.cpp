@@ -269,6 +269,9 @@ void process_reads (char* infile1, char* infile2, char* outfile, int rank, int s
 	non_concat_out1.close();
 	non_concat_out2.close();
 
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
 	
 	if (rank == 0) {
 
@@ -284,23 +287,23 @@ void process_reads (char* infile1, char* infile2, char* outfile, int rank, int s
 			string discarded_filename2 = get_file_name(string("discarded"), 2, string(outfile));
 			string junk_discarded_filename2 = get_file_name(string("junk_discarded"), 2, string(outfile));
 
-			merge_worker_files(out_filename1, size);
-			merge_worker_files(junk_filename1, size);
-			merge_worker_files(discarded_filename1, size);
-			merge_worker_files(junk_discarded_filename1, size);
-			merge_worker_files(out_filename2, size);
-			merge_worker_files(junk_filename2, size);
-			merge_worker_files(discarded_filename2, size);
-			merge_worker_files(junk_discarded_filename2, size);
+			merge_files(out_filename1, size);
+			merge_files(junk_filename1, size);
+			merge_files(discarded_filename1, size);
+			merge_files(junk_discarded_filename1, size);
+			merge_files(out_filename2, size);
+			merge_files(junk_filename2, size);
+			merge_files(discarded_filename2, size);
+			merge_files(junk_discarded_filename2, size);
 		}
 
 		string non_concat_filename1 = get_file_name(string("non_concat"), 1, string(outfile));
 		string non_concat_filename2 = get_file_name(string("non_concat"), 2, string(outfile));
 		string concat_filename = string("concat_") + string(outfile);
 
-		merge_worker_files(non_concat_filename1, size);
-		merge_worker_files(non_concat_filename2, size);
-		merge_worker_files(concat_filename, size);
+		merge_files(non_concat_filename1, size);
+		merge_files(non_concat_filename2, size);
+		merge_files(concat_filename, size);
 
 		
 		// get the total numbers for diagnostics
