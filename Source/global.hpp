@@ -4,14 +4,7 @@
 // defaults
 #define DEFAULT_MIN_CUT_LENGTH 11
 #define DEFAULT_MIN_MATCH_LENGTH 7
-#define DATABLOCKS 10000000
-#define LINEBLOCKS 1000
-
-// // universal sequence for tru seq adapters
-// extern const std::string TRU_SEQ_ADAPTER = "GATCGGAAGAGCACACGTCTGAACTCCAGTCAC";
-
-// // adapters
-// extern std::vector<std::string> adapters;
+#define LINEBLOCKS 100000
 
 
 // struct for holding info for a read

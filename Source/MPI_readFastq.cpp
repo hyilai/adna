@@ -28,7 +28,6 @@
 #include "steps.hpp"
 #include "utilities.hpp"
 #include "global.hpp"
-#include "hash_table.hpp"
 #include "MPI_readFastq.hpp"
 
 using namespace std;
@@ -43,7 +42,11 @@ const int NUM_NON_CONCAT2_TAG = 5;
 
 
 // numbers for diagnostics
-int num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final, num_non_concat1, num_non_concat2;
+int num_reads, discarded1, discarded2, num_concat, num_final, num_non_concat1, num_non_concat2;
+
+// algorithm
+SmithWaterman* sw;
+int m_max, n_max;
 
 
 int gather_number (int original_value, int source, int tag) {
@@ -53,14 +56,47 @@ int gather_number (int original_value, int source, int tag) {
 	return original_value + temp;
 }
 
+int max_sequence_length(char *infile) {
+	int n = 0;
+	ifstream in(infile);
+	string info, sequence, extra, quality;
+	while(read_from_fastq(in, info, sequence, extra, quality)) {
+		if (sequence.length() > n) n = sequence.length();
+	}
+	in.close();
+	return n;
+}
+
+
+void set_max_grid (int rank, char* infile1, char* infile2) {
+
+	// find max string lengths
+	if (rank == 0) m_max = max_sequence_length(infile1);
+	if (rank == 0) n_max = max_sequence_length(infile2);
+
+	MPI_Bcast(&m_max, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&n_max, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
+	// set grid size
+	sw->set_grid_size(m_max, n_max);
+}
+
 
 // single threaded read processing function
 void process_reads (char* infile1, char* infile2, char* outfile, int rank, int size, vector<string> adapters, bool debug) {
 
-	num_reads1 = 0; num_reads2 = 0; discarded1 = 0; discarded2 = 0; num_concat = 0; num_final = 0; num_non_concat1 = 0; num_non_concat2 = 0;
+	num_reads = 0; discarded1 = 0; discarded2 = 0;
+	num_concat = 0; num_final = 0; num_non_concat1 = 0; num_non_concat2 = 0;
 
 	//start clock
 	clock_t start_time = clock();
+
+
+	// make new sw object
+	sw = new SmithWaterman(minimum_match_length);
+	set_max_grid(rank, infile1, infile2);
 
 
 	// diagnostic files
@@ -123,17 +159,16 @@ void process_reads (char* infile1, char* infile2, char* outfile, int rank, int s
 		if (!has_more1 || !has_more2) break;
 
 		// don't process this set of data if it's not for this process rank
-		num_reads1++;
-		num_reads2++;
-		if ((num_reads1-1) % size != rank) continue;
+		num_reads++;
+		if ((num_reads-1) % size != rank) continue;
 
 
-		if (num_reads1 % LINEBLOCKS == 0) {
-			cout << "Parsing read " << num_reads1 << "..." << endl;
+		if (num_reads % LINEBLOCKS == 0) {
+			cout << "Parsing read " << num_reads << "..." << endl;
 		}
 
 		if (!is_same_pair(info1, info2)) {
-			cout << "\tWarning: read " << num_reads1 << " from file1 and file2 are of not the same pair; skipping" << endl;
+			cout << "\tWarning: read " << num_reads << " from file1 and file2 are of not the same pair; skipping" << endl;
 			continue;
 		}
 
@@ -142,8 +177,8 @@ void process_reads (char* infile1, char* infile2, char* outfile, int rank, int s
 		strip_t(sequence2, quality2);
 		
 		// trim
-		read1 = trim_read (sequence1, quality1, new_quality1, trimmed_junk1, junk_quality1, adapters);
-		read2 = trim_read (sequence2, quality2, new_quality2, trimmed_junk2, junk_quality2, adapters);
+		read1 = trim_read (sw, sequence1, quality1, new_quality1, trimmed_junk1, junk_quality1, adapters);
+		read2 = trim_read (sw, sequence2, quality2, new_quality2, trimmed_junk2, junk_quality2, adapters);
 
 		// flags for trimming
 		bool read1_good,read2_good;
@@ -199,7 +234,7 @@ void process_reads (char* infile1, char* infile2, char* outfile, int rank, int s
 			string concatenated, concat_quality;
 
 			// concatenate reads
-			concatenated = concat_reads(read1, read2, quality1, new_quality2, concat_quality);
+			concatenated = concat_reads(sw, read1, read2, new_quality1, new_quality2, concat_quality);
 
 			if (concatenated.length() > 0) {
 				num_concat++;
@@ -208,8 +243,8 @@ void process_reads (char* infile1, char* infile2, char* outfile, int rank, int s
 				if (quality_check(concat_quality)) {
 					num_final++;
 
-					string new_info = info1 + string("_concatenated");
-					write_to_fastq(concat_out, new_info, concatenated, extra2, concat_quality);
+					// string new_info = info1 + string("_concatenated");
+					write_to_fastq(concat_out, info1, concatenated, extra2, concat_quality);
 
 					concat_good = true;
 				}
@@ -218,10 +253,10 @@ void process_reads (char* infile1, char* infile2, char* outfile, int rank, int s
 
 		if (!concat_good) {
 			// output the two reads separately
-			if (read1_good && quality_check(quality1)) {
+			if (read1_good && quality_check(new_quality1)) {
 
 				num_non_concat1++;
-				write_to_fastq(non_concat_out1, info1, read1, extra2, quality1);
+				write_to_fastq(non_concat_out1, info1, read1, extra2, new_quality1);
 
 			} else if (read2_good && quality_check(new_quality2)) {
 
@@ -324,7 +359,7 @@ void process_reads (char* infile1, char* infile2, char* outfile, int rank, int s
 		double elapsed_time = (end_time - start_time) / (double) CLOCKS_PER_SEC;
 
 		/* print */
-		print_diagnostics(elapsed_time, num_reads1, num_reads2, discarded1, discarded2, num_concat, num_final, num_non_concat1, num_non_concat2);
+		print_diagnostics(elapsed_time, num_reads, discarded1, discarded2, num_concat, num_final, num_non_concat1, num_non_concat2);
 
 	} else {
 		MPI_Request request;

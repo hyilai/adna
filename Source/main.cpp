@@ -152,10 +152,6 @@ bool match_files (string &file1, string &file2) {
 			file2 = temp;
 		}
 
-		// edit info
-		// fastq_info.first = line1_first;
-		// fastq_info.second = line1_second;
-
 		return true;
 	}
 	return false;

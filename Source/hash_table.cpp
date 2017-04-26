@@ -19,20 +19,20 @@ hash_table::hash_table() {
 string hash_table::get_key (string info) {
 
 	// tokenize
-	stringstream ss;
-	ss.str(info);
-	string token;
-	for (int i = 0; i < 4; i++) {
-		getline(ss, token, ':');
-	}
-		
-	string flowcell;
-	getline(ss, flowcell, ':');
-	string x;
-	getline(ss, x, ':');
-	string y;
-	getline(ss, y, ' ');
+	string flowcell, x, y;
 
+	size_t found = info.find(" ");
+	info = info.substr(0, found);
+
+	found = info.find_last_of(":");			// y coordinate
+	y = info.substr(found+1);
+	info = info.substr(0, found);
+	found = info.find_last_of(":");			// x coordinate
+	x = info.substr(found+1);
+	info = info.substr(0, found);
+	found = info.find_last_of(":");			// flowcell
+	flowcell = info.substr(found+1);
+	info = info.substr(0, found);
 	
 	string key = flowcell + ":" + x + ":" + y;
 

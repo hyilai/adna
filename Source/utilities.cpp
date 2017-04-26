@@ -132,7 +132,7 @@ void write_to_fastq (ofstream &file_stream, string info, string seq, string extr
 
 
 // print diagnostics after the program runs
-void print_diagnostics (double elapsed_time, int num_reads1, int num_reads2, int discarded1, int discarded2, int num_concat, int num_final, int num_non_concat1, int num_non_concat2) {
+void print_diagnostics (double elapsed_time, int num_reads, int discarded1, int discarded2, int num_concat, int num_final, int num_non_concat1, int num_non_concat2) {
 
 	int elapsed_sec, elapsed_min, elapsed_hrs, elapsed_days;
 	int seconds = (int) elapsed_time;
@@ -154,8 +154,7 @@ void print_diagnostics (double elapsed_time, int num_reads1, int num_reads2, int
 	// print number of discarded reads
 	cout << "Minimum read length after trimming: " << minimum_read_length << endl;
 	cout << "Minimum matching length: " << minimum_match_length << endl;
-	cout << "Total number of reads in file1: " << num_reads1 << endl;
-	cout << "Total number of reads in file2: " << num_reads2 << endl;
+	cout << "Total number of reads: " << num_reads << endl;
 	cout << "Number of discarded reads in file 1 due to being trimmed too short: " << discarded1 << endl;
 	cout << "Number of discarded reads in file 2 due to being trimmed too short: " << discarded2 << endl;
 	cout << "Number of concatenated reads: " << num_concat << endl;

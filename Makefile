@@ -3,10 +3,6 @@ EXECUTABLE = Bin/adna
 RUNTIME	   = Bin/test_runtime
 
 # C & C++ compiler
-#CC       = gcc
-#CXX      = g++-4.8
-# CC        = clang
-# CXX       = clang++
 CC		  = /usr/local/gcc-5.3.0/bin/gcc
 CXX 	  = /usr/local/gcc-5.3.0/bin/g++
 CXXFLAGS  = -std=c++11
@@ -18,22 +14,15 @@ BOOSTFLAG = -lz -lboost_iostreams
 $SWCPP 	  = Source/SmithWaterman.cpp
 $SWH	  = Source/SmithWaterman.hpp
 
-$HASHCPP  = Source/hash_table.cpp
-$HASHH 	  = Source/hash_table.hpp
-
 
 # Rules
 all: $(EXECUTABLE)
 
 $(EXECUTABLE):
-	$(MPICXX) $(MPIFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/hash_table.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq.cpp Source/main.cpp -o $@ $^
+	$(MPICXX) $(MPIFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq.cpp Source/main.cpp -o $@ $^
 
 $(RUNTIME):
-	$(MPICXX) $(MPIFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/hash_table.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq2.cpp Source/main2.cpp -o $@ $^
+	$(MPICXX) $(MPIFLAG) Source/SmithWaterman.cpp Source/global.cpp Source/steps.cpp Source/memory_usage.cpp Source/utilities.cpp Source/MPI_readFastq2.cpp Source/main2.cpp -o $@ $^
 
 clean:
-
-
-tarball:
-	tar -zcvf ziplib.tar.gz *
-	
+	rm $(EXECUTABLE) $(RUNTIME)

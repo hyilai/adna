@@ -26,14 +26,15 @@ bool strip_t (string &sequence, string &quality) {
 }
 
 // step 2 if no adapter file is specified
-string trim_read (string sequence, string quality, string &new_quality, string &junk, string &junk_quality, vector<string> adapters) {
+string trim_read (SmithWaterman *sw, string sequence, string quality, string &new_quality, string &junk, string &junk_quality, vector<string> adapters) {
 	string read = sequence;
 	int highest_score = 0;
 
 
 	for (int i = 0; i < adapters.size(); i++) {
 
-		SmithWaterman* sw = new SmithWaterman(sequence, adapters[i], quality, minimum_match_length);
+		sw->set_strings(sequence, quality, adapters[i]);
+		sw->build_grid();
 
 		int curr_high_score = sw->get_highest_score();
 
@@ -44,8 +45,6 @@ string trim_read (string sequence, string quality, string &new_quality, string &
 			junk = sw->get_trimmed();
 			junk_quality = sw->get_trimmed_quality();
 		}
-
-		delete sw;
 	}
 
 
@@ -55,20 +54,18 @@ string trim_read (string sequence, string quality, string &new_quality, string &
 
 // step 3
 // merge two reads together
-string concat_reads (string sequence1, string sequence2, string quality1, string quality2, string &new_quality) {
+string concat_reads (SmithWaterman *sw, string sequence1, string sequence2, string quality1, string quality2, string &new_quality) {
 	string concat = "";
 	new_quality = "";
-	// int highest_score = 0;
 
-
-	SmithWaterman* sw = new SmithWaterman(sequence1, sequence2, quality1, quality2, minimum_match_length);
+	sw->set_strings(sequence1, quality1, sequence2, quality2);
+	sw->build_grid();
 	// int curr_high_score = sw->get_highest_score();
-	if (sw->match_reads()) {
-		concat = sw->get_matched_string();
-		new_quality = sw->get_matched_quality();
+	if (sw->concat_strings()) {
+		concat = sw->get_concat_string();
+		new_quality = sw->get_concat_quality();
 	}
-	delete sw;
-
+	
 	return concat;
 }
 
